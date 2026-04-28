@@ -1,4 +1,5 @@
 import { AXLMesh } from "@/components/mesh/AXLMesh";
+import { AuctionArena } from "@/components/auction/AuctionArena";
 
 export default function Home() {
   return (
@@ -37,6 +38,27 @@ export default function Home() {
       </header>
 
       <AXLMesh />
+
+      <div className="mt-[18px] grid grid-cols-1 gap-[18px] lg:grid-cols-[1.1fr_1.4fr]">
+        <AuctionArena />
+
+        <section className="overflow-hidden border border-[var(--border)] bg-[var(--bg-panel)]">
+          <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <span>◆ Pipeline Execution</span>
+            <div className="flex gap-[18px]">
+              <span>
+                Tokens/s <b className="ml-1 font-medium text-[var(--text)]">0</b>
+              </span>
+              <span>
+                Layer <b className="ml-1 font-medium text-[var(--text)]">—</b>
+              </span>
+            </div>
+          </div>
+          <div className="flex h-[380px] items-center justify-center text-[11px] text-[var(--text-muted)]">
+            Pipeline view coming next.
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
