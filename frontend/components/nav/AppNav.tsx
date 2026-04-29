@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { loadAuth, clearAuth } from "@/lib/auth-store";
 
 function GridIcon() {
   return (
@@ -43,15 +45,38 @@ function WalletIcon() {
   );
 }
 
+function TerminalIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <rect x="1" y="2" width="14" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M4 6l3 2.5L4 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 11h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const NAV = [
-  { href: "/marketplace", label: "Marketplace", icon: <GridIcon /> },
-  { href: "/jobs/new", label: "Post Job", icon: <PlusIcon /> },
-  { href: "/jobs", label: "My Jobs", icon: <ListIcon /> },
-  { href: "/wallet", label: "My Wallet", icon: <WalletIcon /> },
+  { href: "/marketplace", label: "Marketplace", icon: <GridIcon />,    exact: false },
+  { href: "/jobs/new",    label: "Post Job",    icon: <PlusIcon />,     exact: true  },
+  { href: "/jobs",        label: "My Jobs",     icon: <ListIcon />,     exact: false },
+  { href: "/wallet",      label: "My Wallet",   icon: <WalletIcon />,   exact: true  },
+  { href: "/operator",    label: "Operator",    icon: <TerminalIcon />, exact: false },
 ];
 
 export function AppNav() {
   const pathname = usePathname();
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    const a = loadAuth();
+    setUsername(a?.username ?? null);
+  }, [pathname]);
+
+  function signOut() {
+    clearAuth();
+    setUsername(null);
+    window.location.href = "/connect";
+  }
 
   return (
     <nav className="sticky top-0 h-screen w-[200px] shrink-0 flex flex-col border-r border-[var(--border)] bg-[var(--bg-panel)] overflow-y-auto">
@@ -71,11 +96,10 @@ export function AppNav() {
 
       <div className="flex flex-col gap-0.5 p-3 flex-1">
         {NAV.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" &&
-              item.href !== "/jobs/new" &&
-              pathname.startsWith(item.href));
+          const isActive = item.exact
+            ? pathname === item.href
+            : pathname === item.href ||
+              (pathname.startsWith(item.href) && item.href !== "/");
           return (
             <Link
               key={item.href}
@@ -96,19 +120,31 @@ export function AppNav() {
       </div>
 
       <div className="p-4 border-t border-[var(--border)]">
-        <Link
-          href="/connect"
-          className="flex items-center gap-2 text-[10px] hover:opacity-80 transition-opacity"
-        >
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-[var(--green)] shrink-0"
-            style={{ animation: "pulse 2s infinite" }}
-          />
-          <span className="text-[var(--text-muted)] truncate">0x1f2a…a01</span>
-        </Link>
-        <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em] mt-0.5 block">
-          AXL mesh · 8 peers
-        </span>
+        {username ? (
+          <>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[var(--green)] shrink-0"
+                style={{ animation: "pulse 2s infinite" }}
+              />
+              <span className="text-[11px] text-[var(--text-muted)] truncate">{username}</span>
+            </div>
+            <button
+              onClick={signOut}
+              className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em] hover:text-[var(--red)] transition-colors mt-0.5"
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <Link
+            href="/connect"
+            className="flex items-center gap-2 text-[10px] hover:opacity-80 transition-opacity"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-faint)] shrink-0" />
+            <span className="text-[var(--text-faint)]">Sign in</span>
+          </Link>
+        )}
       </div>
     </nav>
   );
