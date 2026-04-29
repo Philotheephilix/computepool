@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 import { loadAuth, clearAuth } from "@/lib/auth-store";
 
 function GridIcon() {
@@ -66,6 +67,7 @@ const NAV = [
 export function AppNav() {
   const pathname = usePathname();
   const [username, setUsername] = useState<string | null>(null);
+  const { address, isConnected, chain } = useAccount();
 
   useEffect(() => {
     const a = loadAuth();
@@ -119,7 +121,18 @@ export function AppNav() {
         })}
       </div>
 
-      <div className="p-4 border-t border-[var(--border)]">
+      <div className="p-4 border-t border-[var(--border)] flex flex-col gap-2">
+        {isConnected && address && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">
+              {chain?.name ?? "0G"}
+            </span>
+            <span className="text-[10px] text-[var(--blue)] font-mono truncate">
+              {address.slice(0, 8)}…{address.slice(-4)}
+            </span>
+          </div>
+        )}
+
         {username ? (
           <>
             <div className="flex items-center gap-2 mb-0.5">
@@ -131,7 +144,7 @@ export function AppNav() {
             </div>
             <button
               onClick={signOut}
-              className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em] hover:text-[var(--red)] transition-colors mt-0.5"
+              className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em] hover:text-[var(--red)] transition-colors"
             >
               Sign out
             </button>

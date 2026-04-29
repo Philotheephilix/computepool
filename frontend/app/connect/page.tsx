@@ -3,10 +3,76 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { injected } from "wagmi";
 import { auth, ApiError } from "@/lib/api";
 import { saveAuth, loadAuth, clearAuth } from "@/lib/auth-store";
 
 type Tab = "signin" | "register";
+
+function SimPill() {
+  return (
+    <span className="ml-2 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-[0.1em] border border-[#ff9c0044] text-[#ff9c00] bg-[#ff9c000d]">
+      simulated
+    </span>
+  );
+}
+
+function WalletSection() {
+  const { address, isConnected, chain } = useAccount();
+  const { connect, isPending } = useConnect();
+  const { disconnect } = useDisconnect();
+
+  if (isConnected && address) {
+    return (
+      <div className="p-4 rounded border border-[var(--border)] bg-[var(--bg-panel)] flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-[0.1em]">Wallet</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00ff9c1a] text-[var(--green)] border border-[#00ff9c44] uppercase tracking-[0.1em]">
+            connected
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[var(--green)] shrink-0" style={{ animation: "pulse 2s infinite" }} />
+          <span className="text-[12px] text-[var(--text)] font-mono truncate">
+            {address.slice(0, 8)}…{address.slice(-6)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-[var(--text-faint)]">
+            {chain?.name ?? "Unknown network"}
+          </span>
+          <button
+            onClick={() => disconnect()}
+            className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em] hover:text-[var(--red)] transition-colors"
+          >
+            Disconnect
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded border border-[var(--border)] bg-[var(--bg-panel)] flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-[0.1em]">Wallet</span>
+        <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">0G Galileo · 16602</span>
+      </div>
+      <button
+        onClick={() => connect({ connector: injected() })}
+        disabled={isPending}
+        className="w-full py-2.5 border border-[var(--border-soft)] text-[var(--text)] text-[11px] uppercase tracking-[0.12em] rounded hover:bg-[var(--bg-elev)] transition-colors disabled:opacity-50"
+      >
+        {isPending ? "Connecting…" : "Connect MetaMask / Injected →"}
+      </button>
+      <p className="text-[9px] text-[var(--text-faint)] leading-relaxed">
+        Used for on-chain identity, royalty splits, and 0G Storage signing.
+        iNFT minting requires ERC-7857 — <span className="text-[#ff9c00]">not yet on mainnet</span>.
+      </p>
+    </div>
+  );
+}
 
 export default function ConnectPage() {
   const router = useRouter();
@@ -74,6 +140,7 @@ export default function ConnectPage() {
               </button>
             </div>
           </div>
+          <WalletSection />
         </div>
       </main>
     );
@@ -87,13 +154,19 @@ export default function ConnectPage() {
             ← Back
           </Link>
           <h2 className="text-[28px] text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
-            {tab === "signin" ? "Sign In" : "Create Account"}
+            Connect
           </h2>
           <p className="text-[11px] text-[var(--text-muted)] mt-1">
-            {tab === "signin"
-              ? "Access your nodes, pools, and royalties."
-              : "Register to run workers, post jobs, and earn royalties."}
+            Wallet for on-chain identity · API key for inference.
           </p>
+        </div>
+
+        <WalletSection />
+
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-[var(--border)]" />
+          <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">Orchestrator</span>
+          <div className="flex-1 h-px bg-[var(--border)]" />
         </div>
 
         <div className="flex border border-[var(--border)] rounded overflow-hidden">
@@ -172,7 +245,7 @@ export default function ConnectPage() {
         {tab === "register" && (
           <p className="text-[10px] text-[var(--text-faint)] text-center leading-relaxed">
             Your API key is generated on registration and stored locally.
-            On-chain identity via 0G iNFT coming soon.
+            On-chain identity via 0G iNFT <SimPill /> coming soon.
           </p>
         )}
       </div>

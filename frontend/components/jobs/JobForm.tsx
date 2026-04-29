@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { pools as poolsApi, type Pool, type InferResponse, ApiError } from "@/lib/api";
+import { saveJob } from "@/lib/job-store";
 import { loadAuth } from "@/lib/auth-store";
 
 function InferResult({ result }: { result: InferResponse }) {
@@ -87,6 +88,7 @@ export function JobForm() {
 
     try {
       const res = await poolsApi.infer(poolName, prompt, maxTokens, temperature);
+      saveJob(res);
       setResult(res);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Request failed.");

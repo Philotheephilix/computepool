@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useApiState } from "@/hooks/useApiState";
 import { pools as poolsApi, nodes as nodesApi, ApiError, type Pool, type Node } from "@/lib/api";
+import { uploadJsonToStorage } from "@/lib/0g-storage";
+import { getEthersSigner } from "@/lib/0g-compute";
 
 // ── Status badges ─────────────────────────────────────────────────────────
 
@@ -223,9 +225,110 @@ function AddNodeDialog({
   );
 }
 
+// ── Bind to 0G Storage dialog ─────────────────────────────────────────────
+
+function BindStorageDialog({
+  pool,
+  onClose,
+}: {
+  pool: Pool;
+  onClose: () => void;
+}) {
+  const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
+  const [txHash, setTxHash] = useState<string>("");
+  const [errMsg, setErrMsg] = useState<string>("");
+
+  async function handleBind() {
+    setStatus("busy");
+    setErrMsg("");
+
+    const signer = await getEthersSigner();
+    if (!signer) {
+      setStatus("error");
+      setErrMsg("No wallet connected. Connect MetaMask on the /connect page first.");
+      return;
+    }
+
+    const metadata = {
+      pool: pool.name,
+      model: pool.model,
+      nodes: pool.node_ids,
+      price_per_token_usdc: pool.price_per_token_usdc,
+      bound_at: new Date().toISOString(),
+    };
+
+    const result = await uploadJsonToStorage(metadata, signer);
+    if (result.ok) {
+      setTxHash(result.txHash);
+      setStatus("done");
+    } else {
+      setErrMsg(result.error);
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-sm flex flex-col gap-4 p-5 rounded border border-[var(--border-soft)] bg-[var(--bg-elev)]">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[14px] text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+            Bind to 0G Storage · {pool.name}
+          </h3>
+          <span className="px-1.5 py-0.5 rounded text-[8px] uppercase tracking-[0.1em] border border-[#00ff9c44] text-[var(--green)] bg-[#00ff9c0d]">
+            real onchain
+          </span>
+        </div>
+
+        <p className="text-[11px] text-[var(--text-faint)] leading-relaxed">
+          Uploads pool metadata (model, nodes, price) to 0G Storage.
+          Requires a connected wallet with testnet A0GI for gas.
+        </p>
+
+        <div className="flex flex-col gap-1 text-[10px] text-[var(--text-faint)]">
+          <div className="flex gap-2"><span className="w-16 shrink-0">Pool</span><span className="text-[var(--text-muted)]">{pool.name}</span></div>
+          <div className="flex gap-2"><span className="w-16 shrink-0">Model</span><span className="text-[var(--text-muted)]">{pool.model ?? "—"}</span></div>
+          <div className="flex gap-2"><span className="w-16 shrink-0">Nodes</span><span className="text-[var(--text-muted)]">{pool.node_ids.length}</span></div>
+        </div>
+
+        {status === "done" && (
+          <div className="flex flex-col gap-1 px-3 py-2 rounded border border-[#00ff9c44] bg-[#00ff9c0d]">
+            <span className="text-[10px] text-[var(--green)] uppercase tracking-[0.1em]">Uploaded</span>
+            <span className="text-[9px] text-[var(--green)] font-mono break-all">{txHash}</span>
+          </div>
+        )}
+
+        {status === "error" && <ErrBox msg={errMsg} />}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2 border border-[var(--border)] text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em] rounded hover:border-[var(--border-soft)]"
+          >
+            {status === "done" ? "Close" : "Cancel"}
+          </button>
+          {status !== "done" && (
+            <button
+              onClick={handleBind}
+              disabled={status === "busy"}
+              className="flex-1 py-2 bg-[var(--green)] text-black text-[10px] font-bold uppercase tracking-[0.12em] rounded hover:opacity-90 disabled:opacity-50"
+            >
+              {status === "busy" ? "Uploading…" : "Bind →"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main dashboard ────────────────────────────────────────────────────────
 
-type Dialog = { type: "init"; poolName: string } | { type: "addNode"; poolName: string };
+type Dialog =
+  | { type: "init"; poolName: string }
+  | { type: "addNode"; poolName: string }
+  | { type: "bindStorage"; poolName: string; txHash?: string; error?: string };
 
 export function OperatorClient() {
   const { data, loading, error, refresh } = useApiState();
@@ -316,6 +419,12 @@ export function OperatorClient() {
           poolName={dialog.poolName}
           availableNodes={unassignedNodes}
           onDone={() => { setDialog(null); refresh(); }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.type === "bindStorage" && (
+        <BindStorageDialog
+          pool={pls.find((p) => p.name === dialog.poolName)!}
           onClose={() => setDialog(null)}
         />
       )}
@@ -494,6 +603,11 @@ export function OperatorClient() {
                           >
                             Infer
                           </Link>
+                          <ActionBtn
+                            label="0G Storage"
+                            busy={busy[`${keyPfx}-bind`]}
+                            onClick={() => setDialog({ type: "bindStorage", poolName: p.name })}
+                          />
                           <ActionBtn
                             label="Unload"
                             busy={busy[`${keyPfx}-unload`]}
