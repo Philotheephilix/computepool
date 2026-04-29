@@ -60,14 +60,14 @@ export function PipelineView({
 
   return (
     <section className="relative overflow-hidden border border-[var(--border)] bg-[var(--bg-panel)]">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
         <span>◆ Pipeline Execution</span>
         <div className="flex gap-[18px]">
           <span>
-            Tokens/s <b className="ml-1 font-medium text-[var(--text)]">{tps}</b>
+            Tokens/s <b className="ml-1 font-medium text-[var(--text)] tabular-nums">{tps}</b>
           </span>
           <span>
-            Layer <b className="ml-1 font-medium text-[var(--text)]">{curLayer}</b>
+            Layer <b className="ml-1 font-medium text-[var(--text)] tabular-nums">{curLayer}</b>
           </span>
         </div>
       </div>

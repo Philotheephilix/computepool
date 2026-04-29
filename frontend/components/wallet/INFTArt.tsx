@@ -48,6 +48,8 @@ export function INFTArt() {
           fill="var(--green)"
           fontSize="9"
           fontWeight="500"
+          letterSpacing="1.5"
+          style={{ fontFamily: "var(--font-mono)" }}
         >
           SHARD
         </text>

@@ -31,7 +31,13 @@ export function MeshNode({
         strokeWidth={1.5}
         className="transition-[fill,stroke,r] duration-300"
       />
-      <text y={24} textAnchor="middle" fill="var(--text-muted)" fontSize={9}>
+      <text
+        y={24}
+        textAnchor="middle"
+        fill="var(--text-muted)"
+        fontSize={10}
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
         {id}
       </text>
     </g>

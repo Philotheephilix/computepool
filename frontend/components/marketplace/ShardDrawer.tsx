@@ -32,7 +32,7 @@ export function ShardDrawer({
       <div className="fixed top-0 right-0 h-full w-[340px] z-50 flex flex-col border-l border-[var(--border)] bg-[var(--bg-panel)] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
           <span
-            className="text-[15px] text-[var(--text)]"
+            className="text-[22px] text-[var(--text)]"
             style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}
           >
             Shard-{shard.num}
@@ -50,7 +50,7 @@ export function ShardDrawer({
             <ShardArt num={shard.num} layerGroup={shard.layerGroup} size={96} />
             <div className="flex flex-col gap-1.5 pt-1 min-w-0">
               <span
-                className="text-[11px] px-2 py-0.5 rounded border self-start"
+                className="font-mono text-[11px] px-2 py-0.5 rounded border self-start"
                 style={{
                   color: accent,
                   borderColor: `${accent}44`,
@@ -59,16 +59,16 @@ export function ShardDrawer({
               >
                 {shard.layers}
               </span>
-              <span className="text-[11px] text-[var(--text-muted)] break-all">
+              <span className="font-mono text-[12px] text-[var(--text-muted)] break-all">
                 {shard.tokenId}
               </span>
-              <span className="text-[10px] text-[var(--text-faint)]">ERC-7857</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-faint)]">ERC-7857</span>
               <div className="flex items-center gap-1.5 mt-1">
                 <span
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ background: statusColor }}
                 />
-                <span className="text-[11px]" style={{ color: statusColor }}>
+                <span className="text-[12px]" style={{ color: statusColor }}>
                   {STATUS_LABEL[shard.status]}
                 </span>
               </div>
@@ -78,13 +78,13 @@ export function ShardDrawer({
           <div className="border-t border-[var(--border)]" />
 
           <div className="flex flex-col gap-2">
-            <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.12em]">
+            <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
               Reputation
             </span>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[22px] text-[var(--green)]">{shard.reputation}%</span>
-              <span className="text-[11px] text-[var(--text-muted)]">
-                {wins}/{shard.winHistory.length} wins
+              <span className="font-mono text-[22px] text-[var(--green)] tabular-nums">{shard.reputation}%</span>
+              <span className="text-[12px] text-[var(--text-muted)]">
+                <span className="font-mono tabular-nums">{wins}/{shard.winHistory.length}</span> wins
               </span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-[var(--bg-elev)] overflow-hidden">
@@ -105,7 +105,7 @@ export function ShardDrawer({
               {shard.winHistory.map((h, i) => (
                 <span
                   key={i}
-                  className="w-4 h-4 rounded-sm flex items-center justify-center text-[8px]"
+                  className="w-4 h-4 rounded-sm flex items-center justify-center font-mono text-[10px]"
                   style={{
                     background: h === "w" ? "#00ff9c1a" : "#ff4f6e1a",
                     color: h === "w" ? "var(--green)" : "var(--red)",
@@ -131,10 +131,10 @@ export function ShardDrawer({
                 key={s.label}
                 className="p-3 rounded border border-[var(--border)] bg-[var(--bg-elev)] flex flex-col gap-1"
               >
-                <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">
+                <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
                   {s.label}
                 </span>
-                <span className="text-[14px] text-[var(--text)]">{s.value}</span>
+                <span className="font-mono text-[14px] text-[var(--text)] tabular-nums">{s.value}</span>
               </div>
             ))}
           </div>
@@ -142,14 +142,14 @@ export function ShardDrawer({
           <div className="border-t border-[var(--border)]" />
 
           <div className="flex flex-col gap-2">
-            <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.12em]">
+            <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
               Compatible Models
             </span>
             <div className="flex gap-2 flex-wrap">
               {shard.models.map((m) => (
                 <span
                   key={m}
-                  className="px-2 py-1 rounded border border-[var(--border)] text-[10px] text-[var(--text-muted)]"
+                  className="px-2 py-1 rounded border border-[var(--border)] font-mono text-[11px] text-[var(--text-muted)]"
                 >
                   {m}
                 </span>
@@ -158,22 +158,22 @@ export function ShardDrawer({
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.12em]">
+            <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
               AXL Peer ID
             </span>
-            <span className="text-[10px] text-[var(--text-muted)] break-all">
+            <span className="font-mono text-[11px] text-[var(--text-muted)] break-all">
               {shard.axlPeerId}
             </span>
           </div>
 
           <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-[var(--border)]">
-            <div className="p-3 rounded border border-[var(--border-soft)] bg-[var(--bg-elev)] text-[10px] text-[var(--text-faint)] leading-relaxed">
+            <div className="p-3 rounded border border-[var(--border-soft)] bg-[var(--bg-elev)] text-[12px] text-[var(--text-faint)] leading-relaxed">
               Inviting this shard broadcasts a coalition request over AXL.
               It will respond with its current bid within the negotiation window.
             </div>
             <Link
               href="/jobs/new"
-              className="block px-4 py-3 bg-[var(--green)] text-black text-[11px] font-bold uppercase tracking-[0.12em] rounded text-center hover:opacity-90 transition-opacity"
+              className="block px-4 py-3 bg-[var(--green)] text-black font-mono text-[11px] font-bold uppercase tracking-[0.08em] rounded text-center hover:opacity-90 transition-opacity"
             >
               Invite to Coalition →
             </Link>

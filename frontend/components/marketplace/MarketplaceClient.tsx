@@ -50,28 +50,28 @@ export function MarketplaceClient() {
       <div className="flex items-start justify-between mb-5 gap-4">
         <div>
           <h1
-            className="text-[22px] text-[var(--text)]"
+            className="text-[30px] leading-tight text-[var(--text)]"
             style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}
           >
             Marketplace
           </h1>
-          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+          <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
             Browse GPU shard iNFTs available for coalition
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 text-[10px] text-[var(--text-faint)] uppercase tracking-[0.1em]">
+        <div className="flex items-center gap-3 shrink-0 font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)]" />
-            {available} available
+            <span className="tabular-nums">{available}</span> available
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--purple)]" />
-            {inCoalition} coalition
+            <span className="tabular-nums">{inCoalition}</span> coalition
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--blue)]" />
-            {executing} executing
+            <span className="tabular-nums">{executing}</span> executing
           </span>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function MarketplaceClient() {
             <button
               key={f.value}
               onClick={() => setLayerFilter(f.value)}
-              className={`px-3 py-1 rounded text-[10px] uppercase tracking-[0.1em] border transition-colors ${
+              className={`px-3 py-1 rounded font-mono text-[10px] uppercase tracking-[0.08em] border transition-colors ${
                 layerFilter === f.value
                   ? "border-[var(--green)] text-[var(--green)] bg-[var(--bg-elev)]"
                   : "border-[var(--border)] text-[var(--text-faint)] hover:border-[var(--border-soft)] hover:text-[var(--text-muted)]"
@@ -96,7 +96,7 @@ export function MarketplaceClient() {
         <div className="relative shrink-0">
           <button
             onClick={() => setSortOpen((v) => !v)}
-            className="flex items-center gap-2 px-3 py-1 rounded border border-[var(--border)] text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em] hover:border-[var(--border-soft)] hover:text-[var(--text)] transition-colors"
+            className="flex items-center gap-2 px-3 py-1 rounded border border-[var(--border)] font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em] hover:border-[var(--border-soft)] hover:text-[var(--text)] transition-colors"
           >
             <span>{currentSort.label}</span>
             <span className="text-[var(--text-faint)]">↕</span>
@@ -107,7 +107,7 @@ export function MarketplaceClient() {
                 <button
                   key={o.value}
                   onClick={() => { setSortKey(o.value); setSortOpen(false); }}
-                  className={`px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em] transition-colors ${
+                  className={`px-3 py-2 text-left font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
                     sortKey === o.value
                       ? "text-[var(--green)] bg-[var(--bg-panel)]"
                       : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-panel)]"
@@ -123,12 +123,12 @@ export function MarketplaceClient() {
 
       {visible.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <span className="text-[11px] text-[var(--text-faint)] uppercase tracking-[0.12em]">
+          <span className="font-mono text-[11px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
             No shards for this filter
           </span>
           <button
             onClick={() => setLayerFilter("all")}
-            className="text-[11px] text-[var(--green)] hover:underline"
+            className="text-[13px] text-[var(--green)] hover:underline"
           >
             Clear filter
           </button>

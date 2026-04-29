@@ -66,16 +66,16 @@ export function AXLMesh({
       className="mb-[18px] border border-[var(--border)] bg-[var(--bg-panel)]"
       aria-label="AXL Mesh"
     >
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
         <span>◆ AXL Mesh · Live</span>
         <div className="flex gap-[18px]">
           <span>
             Nodes{" "}
-            <b className="ml-1 font-medium text-[var(--text)]">{nodeDefs.length}</b>
+            <b className="ml-1 font-medium text-[var(--text)] tabular-nums">{nodeDefs.length}</b>
           </span>
           <span>
             Active channels{" "}
-            <b className="ml-1 font-medium text-[var(--text)]">
+            <b className="ml-1 font-medium text-[var(--text)] tabular-nums">
               {activeChannels}
             </b>
             {activePulseCount > 0 ? (
@@ -84,7 +84,7 @@ export function AXLMesh({
           </span>
           <span>
             Jobs in flight{" "}
-            <b className="ml-1 font-medium text-[var(--text)]">{jobsInFlight}</b>
+            <b className="ml-1 font-medium text-[var(--text)] tabular-nums">{jobsInFlight}</b>
           </span>
         </div>
       </div>
@@ -136,7 +136,7 @@ export function AXLMesh({
           })}
         </svg>
 
-        <div className="absolute bottom-3 left-4 flex gap-4 text-[10px] uppercase tracking-[0.08em] text-[var(--text-faint)]">
+        <div className="absolute bottom-3 left-4 flex gap-4 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-faint)]">
           <LegendDot label="Idle" color="var(--text-faint)" />
           <LegendDot label="Bidding" color="var(--yellow)" />
           <LegendDot label="Coalition" color="var(--purple)" />
@@ -146,25 +146,25 @@ export function AXLMesh({
 
         {tooltip && tooltipPos && (
           <div
-            className="pointer-events-none absolute z-10 w-[320px] border border-[var(--border-soft)] bg-[var(--bg-elev)] px-3 py-2 text-[11px]"
+            className="pointer-events-none absolute z-10 w-[320px] border border-[var(--border-soft)] bg-[var(--bg-elev)] px-3 py-2 text-[12px]"
             style={{ left: tooltipPos.left, top: tooltipPos.top }}
           >
             <div className="mb-1 flex items-baseline justify-between">
-              <div className="text-[12px] font-medium text-[var(--text)]">
+              <div className="font-mono text-[12px] font-medium text-[var(--text)]">
                 {tooltip.id}{" "}
-                <span className="ml-2 text-[var(--text-muted)]">{tooltip.role}</span>
+                <span className="ml-2 font-sans text-[12px] text-[var(--text-muted)]">{tooltip.role}</span>
               </div>
-              <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-faint)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-faint)]">
                 {tooltipState}
               </div>
             </div>
             <div className="grid grid-cols-[110px_1fr] gap-x-2 gap-y-1 text-[var(--text-muted)]">
               <div className="text-[var(--text-faint)]">Reputation</div>
-              <div className="text-[var(--text)]">{tooltip.reputation}%</div>
+              <div className="font-mono text-[var(--text)] tabular-nums">{tooltip.reputation}%</div>
               <div className="text-[var(--text-faint)]">iNFT</div>
-              <div className="text-[var(--text)]">{tooltip.tokenId}</div>
+              <div className="font-mono text-[var(--text)] truncate">{tooltip.tokenId}</div>
               <div className="text-[var(--text-faint)]">AXL peer</div>
-              <div className="text-[var(--text)]">{tooltip.axlPeerId}</div>
+              <div className="font-mono text-[var(--text)] truncate">{tooltip.axlPeerId}</div>
             </div>
           </div>
         )}

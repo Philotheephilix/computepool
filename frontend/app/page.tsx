@@ -17,7 +17,7 @@ export default function LandingPage() {
       <div className="max-w-2xl w-full flex flex-col items-center text-center gap-10">
 
         <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--border-soft)] text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)]"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--border-soft)] font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]"
         >
           <span
             className="w-1.5 h-1.5 rounded-full bg-[var(--green)] inline-block"
@@ -33,7 +33,7 @@ export default function LandingPage() {
           >
             ComputePool
           </h1>
-          <p className="text-[14px] text-[var(--text-muted)] leading-relaxed max-w-md mx-auto">
+          <p className="text-[16px] text-[var(--text-muted)] leading-relaxed max-w-md mx-auto">
             A market of intelligent NFTs that bid against each other to run your AI model.
           </p>
         </div>
@@ -41,13 +41,13 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/connect"
-            className="px-5 py-2.5 bg-[var(--green)] text-black text-[11px] font-bold uppercase tracking-[0.12em] rounded hover:opacity-90 transition-opacity"
+            className="px-5 py-2.5 bg-[var(--green)] text-black font-mono text-[11px] font-bold uppercase tracking-[0.08em] rounded hover:opacity-90 transition-opacity"
           >
             Connect Wallet →
           </Link>
           <Link
             href="/jobs/demo"
-            className="px-5 py-2.5 border border-[var(--border-soft)] text-[var(--text-muted)] text-[11px] uppercase tracking-[0.12em] rounded hover:border-[var(--border)] hover:text-[var(--text)] transition-colors"
+            className="px-5 py-2.5 border border-[var(--border-soft)] text-[var(--text-muted)] font-mono text-[11px] uppercase tracking-[0.08em] rounded hover:border-[var(--border)] hover:text-[var(--text)] transition-colors"
           >
             Watch Live Demo
           </Link>
@@ -61,11 +61,11 @@ export default function LandingPage() {
               key={phase.num}
               className="p-4 rounded border border-[var(--border)] bg-[var(--bg-panel)] flex flex-col gap-2 hover:border-[var(--border-soft)] transition-colors"
             >
-              <span className="text-[10px] text-[var(--green)] uppercase tracking-[0.15em]">
+              <span className="font-mono text-[10px] text-[var(--green)] uppercase tracking-[0.08em]">
                 {phase.num}
               </span>
-              <span className="text-[12px] text-[var(--text)]">{phase.label}</span>
-              <span className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              <span className="text-[14px] font-medium text-[var(--text)]">{phase.label}</span>
+              <span className="text-[13px] text-[var(--text-muted)] leading-relaxed">
                 {phase.desc}
               </span>
             </div>
@@ -76,7 +76,7 @@ export default function LandingPage() {
           {STACK.map((s, i) => (
             <span
               key={i}
-              className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.14em] px-2 py-1 border border-[var(--border)] rounded"
+              className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em] px-2 py-1 border border-[var(--border)] rounded"
             >
               {s}
             </span>

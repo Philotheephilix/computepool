@@ -35,7 +35,7 @@ function relTime(iso: string | null): string {
 
 function ErrBox({ msg }: { msg: string }) {
   return (
-    <div className="px-3 py-2 rounded border border-[#ff4f6e44] bg-[#ff4f6e0d] text-[11px] text-[var(--red)] mt-2">
+    <div className="px-3 py-2 rounded border border-[#ff4f6e44] bg-[#ff4f6e0d] text-[13px] text-[var(--red)] mt-2">
       {msg}
     </div>
   );
@@ -52,7 +52,7 @@ function ActionBtn({
   busy?: boolean;
   variant?: "ghost" | "green" | "red";
 }) {
-  const base = "px-2.5 py-1 rounded text-[10px] uppercase tracking-[0.1em] border transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
+  const base = "px-2.5 py-1 rounded font-mono text-[10px] uppercase tracking-[0.08em] border transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
   const cls =
     variant === "green"
       ? `${base} border-[#00ff9c44] text-[var(--green)] bg-[#00ff9c0a] hover:bg-[#00ff9c1a]`
@@ -106,16 +106,16 @@ function InitDialog({
         onSubmit={submit}
         className="relative z-10 w-full max-w-sm flex flex-col gap-4 p-5 rounded border border-[var(--border-soft)] bg-[var(--bg-elev)]"
       >
-        <h3 className="text-[14px] text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+        <h3 className="text-[20px] leading-tight text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
           Initialize · {poolName}
         </h3>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em]">Model</label>
+          <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em]">Model</label>
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] text-[12px] text-[var(--text)] focus:outline-none"
+            className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] text-[14px] text-[var(--text)] focus:outline-none"
           >
             {modelKeys.map((m) => (
               <option key={m} value={m}>{m} ({models[m]} layers)</option>
@@ -124,7 +124,7 @@ function InitDialog({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em]">Price / token (USDC)</label>
+          <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em]">Price / token (USDC)</label>
           <input
             type="number"
             min="0"
@@ -132,17 +132,17 @@ function InitDialog({
             step="0.000001"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] text-[12px] text-[var(--text)] focus:outline-none"
+            className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] font-mono text-[14px] text-[var(--text)] tabular-nums focus:outline-none"
           />
         </div>
 
         {err && <ErrBox msg={err} />}
 
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2 border border-[var(--border)] text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em] rounded hover:border-[var(--border-soft)]">
+          <button type="button" onClick={onClose} className="flex-1 py-2 border border-[var(--border)] font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em] rounded hover:border-[var(--border-soft)]">
             Cancel
           </button>
-          <button type="submit" disabled={busy} className="flex-1 py-2 bg-[var(--green)] text-black text-[10px] font-bold uppercase tracking-[0.12em] rounded hover:opacity-90 disabled:opacity-50">
+          <button type="submit" disabled={busy} className="flex-1 py-2 bg-[var(--green)] text-black font-mono text-[10px] font-bold uppercase tracking-[0.08em] rounded hover:opacity-90 disabled:opacity-50">
             {busy ? "…" : "Initialize"}
           </button>
         </div>
@@ -189,19 +189,19 @@ function AddNodeDialog({
         onSubmit={submit}
         className="relative z-10 w-full max-w-sm flex flex-col gap-4 p-5 rounded border border-[var(--border-soft)] bg-[var(--bg-elev)]"
       >
-        <h3 className="text-[14px] text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+        <h3 className="text-[20px] leading-tight text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
           Add Node · {poolName}
         </h3>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em]">Node</label>
+          <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em]">Node</label>
           {availableNodes.length === 0 ? (
-            <p className="text-[11px] text-[var(--text-faint)]">No unassigned nodes available.</p>
+            <p className="text-[13px] text-[var(--text-faint)]">No unassigned nodes available.</p>
           ) : (
             <select
               value={nodeId}
               onChange={(e) => setNodeId(e.target.value)}
-              className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] text-[12px] text-[var(--text)] focus:outline-none"
+              className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] font-mono text-[13px] text-[var(--text)] focus:outline-none"
             >
               {availableNodes.map((n) => (
                 <option key={n.node_id} value={n.node_id}>{n.node_id} · {n.status}</option>
@@ -213,10 +213,10 @@ function AddNodeDialog({
         {err && <ErrBox msg={err} />}
 
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2 border border-[var(--border)] text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em] rounded hover:border-[var(--border-soft)]">
+          <button type="button" onClick={onClose} className="flex-1 py-2 border border-[var(--border)] font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em] rounded hover:border-[var(--border-soft)]">
             Cancel
           </button>
-          <button type="submit" disabled={busy || availableNodes.length === 0} className="flex-1 py-2 bg-[var(--green)] text-black text-[10px] font-bold uppercase tracking-[0.12em] rounded hover:opacity-90 disabled:opacity-50">
+          <button type="submit" disabled={busy || availableNodes.length === 0} className="flex-1 py-2 bg-[var(--green)] text-black font-mono text-[10px] font-bold uppercase tracking-[0.08em] rounded hover:opacity-90 disabled:opacity-50">
             {busy ? "…" : "Add Node"}
           </button>
         </div>
@@ -271,30 +271,30 @@ function BindStorageDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative z-10 w-full max-w-sm flex flex-col gap-4 p-5 rounded border border-[var(--border-soft)] bg-[var(--bg-elev)]">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[14px] text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-[20px] leading-tight text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
             Bind to 0G Storage · {pool.name}
           </h3>
-          <span className="px-1.5 py-0.5 rounded text-[8px] uppercase tracking-[0.1em] border border-[#00ff9c44] text-[var(--green)] bg-[#00ff9c0d]">
+          <span className="px-1.5 py-0.5 rounded font-mono text-[10px] uppercase tracking-[0.08em] border border-[#00ff9c44] text-[var(--green)] bg-[#00ff9c0d] shrink-0">
             real onchain
           </span>
         </div>
 
-        <p className="text-[11px] text-[var(--text-faint)] leading-relaxed">
+        <p className="text-[13px] text-[var(--text-faint)] leading-relaxed">
           Uploads pool metadata (model, nodes, price) to 0G Storage.
           Requires a connected wallet with testnet A0GI for gas.
         </p>
 
-        <div className="flex flex-col gap-1 text-[10px] text-[var(--text-faint)]">
-          <div className="flex gap-2"><span className="w-16 shrink-0">Pool</span><span className="text-[var(--text-muted)]">{pool.name}</span></div>
-          <div className="flex gap-2"><span className="w-16 shrink-0">Model</span><span className="text-[var(--text-muted)]">{pool.model ?? "—"}</span></div>
-          <div className="flex gap-2"><span className="w-16 shrink-0">Nodes</span><span className="text-[var(--text-muted)]">{pool.node_ids.length}</span></div>
+        <div className="flex flex-col gap-1 text-[12px] text-[var(--text-faint)]">
+          <div className="flex gap-2"><span className="font-mono uppercase tracking-[0.08em] w-16 shrink-0">Pool</span><span className="font-mono text-[var(--text-muted)]">{pool.name}</span></div>
+          <div className="flex gap-2"><span className="font-mono uppercase tracking-[0.08em] w-16 shrink-0">Model</span><span className="font-mono text-[var(--text-muted)]">{pool.model ?? "—"}</span></div>
+          <div className="flex gap-2"><span className="font-mono uppercase tracking-[0.08em] w-16 shrink-0">Nodes</span><span className="font-mono text-[var(--text-muted)] tabular-nums">{pool.node_ids.length}</span></div>
         </div>
 
         {status === "done" && (
           <div className="flex flex-col gap-1 px-3 py-2 rounded border border-[#00ff9c44] bg-[#00ff9c0d]">
-            <span className="text-[10px] text-[var(--green)] uppercase tracking-[0.1em]">Uploaded</span>
-            <span className="text-[9px] text-[var(--green)] font-mono break-all">{txHash}</span>
+            <span className="font-mono text-[10px] text-[var(--green)] uppercase tracking-[0.08em]">Uploaded</span>
+            <span className="text-[11px] text-[var(--green)] font-mono break-all">{txHash}</span>
           </div>
         )}
 
@@ -304,7 +304,7 @@ function BindStorageDialog({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2 border border-[var(--border)] text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em] rounded hover:border-[var(--border-soft)]"
+            className="flex-1 py-2 border border-[var(--border)] font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em] rounded hover:border-[var(--border-soft)]"
           >
             {status === "done" ? "Close" : "Cancel"}
           </button>
@@ -312,7 +312,7 @@ function BindStorageDialog({
             <button
               onClick={handleBind}
               disabled={status === "busy"}
-              className="flex-1 py-2 bg-[var(--green)] text-black text-[10px] font-bold uppercase tracking-[0.12em] rounded hover:opacity-90 disabled:opacity-50"
+              className="flex-1 py-2 bg-[var(--green)] text-black font-mono text-[10px] font-bold uppercase tracking-[0.08em] rounded hover:opacity-90 disabled:opacity-50"
             >
               {status === "busy" ? "Uploading…" : "Bind →"}
             </button>
@@ -383,8 +383,8 @@ export function OperatorClient() {
   if (error === "unauthenticated") {
     return (
       <div className="flex flex-col gap-3 p-5 rounded border border-[var(--border)] bg-[var(--bg-panel)] max-w-sm">
-        <span className="text-[12px] text-[var(--text-muted)]">Sign in to access the operator dashboard.</span>
-        <Link href="/connect" className="self-start px-4 py-2 bg-[var(--green)] text-black text-[10px] font-bold uppercase tracking-[0.12em] rounded hover:opacity-90">
+        <span className="text-[14px] text-[var(--text-muted)]">Sign in to access the operator dashboard.</span>
+        <Link href="/connect" className="self-start px-4 py-2 bg-[var(--green)] text-black font-mono text-[10px] font-bold uppercase tracking-[0.08em] rounded hover:opacity-90">
           Sign In →
         </Link>
       </div>
@@ -431,10 +431,10 @@ export function OperatorClient() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[22px] text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+          <h1 className="text-[30px] leading-tight text-[var(--text)]" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
             Operator
           </h1>
-          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+          <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
             {data ? `Signed in as ${data.user.username} · ` : ""}
             Refreshes every 10s
           </p>
@@ -442,14 +442,14 @@ export function OperatorClient() {
         <button
           onClick={refresh}
           disabled={loading}
-          className="px-3 py-1.5 border border-[var(--border)] text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em] rounded hover:border-[var(--border-soft)] hover:text-[var(--text)] transition-colors disabled:opacity-40"
+          className="px-3 py-1.5 border border-[var(--border)] font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em] rounded hover:border-[var(--border-soft)] hover:text-[var(--text)] transition-colors disabled:opacity-40"
         >
           {loading ? "…" : "Refresh"}
         </button>
       </div>
 
       {error && error !== "unauthenticated" && (
-        <div className="mb-5 px-3 py-2 rounded border border-[#ff4f6e44] bg-[#ff4f6e0d] text-[11px] text-[var(--red)]">
+        <div className="mb-5 px-3 py-2 rounded border border-[#ff4f6e44] bg-[#ff4f6e0d] text-[13px] text-[var(--red)]">
           {error}
         </div>
       )}
@@ -458,8 +458,8 @@ export function OperatorClient() {
       <div className="grid grid-cols-4 gap-3 mb-8">
         {summaryCards.map((c) => (
           <div key={c.label} className="p-3 rounded border border-[var(--border)] bg-[var(--bg-panel)] flex flex-col gap-1">
-            <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.12em]">{c.label}</span>
-            <span className="text-[22px]" style={{ color: c.color }}>
+            <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">{c.label}</span>
+            <span className="font-mono text-[22px] tabular-nums" style={{ color: c.color }}>
               {loading ? "—" : c.value}
             </span>
           </div>
@@ -468,18 +468,18 @@ export function OperatorClient() {
 
       {/* Nodes */}
       <section className="mb-8">
-        <h2 className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.12em] mb-3">Nodes</h2>
+        <h2 className="text-[16px] font-medium text-[var(--text)] mb-3">Nodes</h2>
         <div className="rounded border border-[var(--border)] overflow-hidden">
           <div className="grid grid-cols-[1fr_90px_80px_80px_80px_120px_60px] gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--bg-panel)]">
             {["Node ID", "Status", "Pool", "Role", "Layers", "Last Seen", ""].map((h) => (
-              <span key={h} className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">{h}</span>
+              <span key={h} className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">{h}</span>
             ))}
           </div>
 
           {loading && !data ? (
-            <div className="px-4 py-6 text-center text-[11px] text-[var(--text-faint)]">Loading…</div>
+            <div className="px-4 py-6 text-center text-[13px] text-[var(--text-faint)]">Loading…</div>
           ) : nodes.length === 0 ? (
-            <div className="px-4 py-6 text-center text-[11px] text-[var(--text-faint)]">
+            <div className="px-4 py-6 text-center text-[13px] text-[var(--text-faint)]">
               No nodes registered. Workers register themselves on startup.
             </div>
           ) : (
@@ -488,16 +488,16 @@ export function OperatorClient() {
                 key={n.node_id}
                 className="grid grid-cols-[1fr_90px_80px_80px_80px_120px_60px] gap-3 px-4 py-3 border-b border-[var(--border)] last:border-0 bg-[var(--bg-panel)] items-center"
               >
-                <span className="text-[11px] text-[var(--text)] truncate">{n.node_id}</span>
-                <span className="text-[10px]" style={{ color: NODE_STATUS_COLOR[n.status] ?? "var(--text-faint)" }}>
+                <span className="font-mono text-[12px] text-[var(--text)] truncate">{n.node_id}</span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: NODE_STATUS_COLOR[n.status] ?? "var(--text-faint)" }}>
                   {n.status}
                 </span>
-                <span className="text-[10px] text-[var(--text-faint)] truncate">{n.pool_name ?? "—"}</span>
-                <span className="text-[10px] text-[var(--text-faint)]">{n.role ?? "—"}</span>
-                <span className="text-[10px] text-[var(--text-faint)]">
+                <span className="font-mono text-[11px] text-[var(--text-faint)] truncate">{n.pool_name ?? "—"}</span>
+                <span className="font-mono text-[11px] text-[var(--text-faint)]">{n.role ?? "—"}</span>
+                <span className="font-mono text-[11px] text-[var(--text-faint)] tabular-nums">
                   {n.layers ? `${n.layers[0]}–${n.layers[1]}` : "—"}
                 </span>
-                <span className="text-[10px] text-[var(--text-faint)]">{relTime(n.last_seen)}</span>
+                <span className="font-mono text-[11px] text-[var(--text-faint)] tabular-nums">{relTime(n.last_seen)}</span>
                 <ActionBtn
                   label="Delete"
                   variant="red"
@@ -516,10 +516,10 @@ export function OperatorClient() {
       {/* Pools */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.12em]">Pools</h2>
+          <h2 className="text-[16px] font-medium text-[var(--text)]">Pools</h2>
           <button
             onClick={() => setShowCreate((v) => !v)}
-            className="px-3 py-1 border border-[var(--border)] text-[10px] text-[var(--text-muted)] uppercase tracking-[0.1em] rounded hover:border-[var(--border-soft)] hover:text-[var(--text)] transition-colors"
+            className="px-3 py-1 border border-[var(--border)] font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-[0.08em] rounded hover:border-[var(--border-soft)] hover:text-[var(--text)] transition-colors"
           >
             {showCreate ? "Cancel" : "+ Create Pool"}
           </button>
@@ -533,12 +533,12 @@ export function OperatorClient() {
               onChange={(e) => setNewPool(e.target.value)}
               placeholder="pool-name (a-z, 0-9, -, _)"
               required
-              className="flex-1 px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] text-[12px] text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--border-soft)]"
+              className="flex-1 px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg-panel)] font-mono text-[13px] text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--border-soft)]"
             />
             <button
               type="submit"
               disabled={createBusy}
-              className="px-4 py-2 bg-[var(--green)] text-black text-[10px] font-bold uppercase tracking-[0.12em] rounded hover:opacity-90 disabled:opacity-50"
+              className="px-4 py-2 bg-[var(--green)] text-black font-mono text-[10px] font-bold uppercase tracking-[0.08em] rounded hover:opacity-90 disabled:opacity-50"
             >
               {createBusy ? "…" : "Create"}
             </button>
@@ -549,14 +549,14 @@ export function OperatorClient() {
         <div className="rounded border border-[var(--border)] overflow-hidden">
           <div className="grid grid-cols-[1fr_160px_80px_80px_80px_auto] gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--bg-panel)]">
             {["Pool", "Model", "Nodes", "Price/tok", "Stage", "Actions"].map((h) => (
-              <span key={h} className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">{h}</span>
+              <span key={h} className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">{h}</span>
             ))}
           </div>
 
           {loading && !data ? (
-            <div className="px-4 py-6 text-center text-[11px] text-[var(--text-faint)]">Loading…</div>
+            <div className="px-4 py-6 text-center text-[13px] text-[var(--text-faint)]">Loading…</div>
           ) : pls.length === 0 ? (
-            <div className="px-4 py-6 text-center text-[11px] text-[var(--text-faint)]">No pools yet.</div>
+            <div className="px-4 py-6 text-center text-[13px] text-[var(--text-faint)]">No pools yet.</div>
           ) : (
             pls.map((p) => {
               const stage = poolStage(p);
@@ -564,13 +564,13 @@ export function OperatorClient() {
               return (
                 <div key={p.name} className="border-b border-[var(--border)] last:border-0 bg-[var(--bg-panel)]">
                   <div className="grid grid-cols-[1fr_160px_80px_80px_80px_auto] gap-3 px-4 py-3 items-center">
-                    <span className="text-[11px] text-[var(--text)] truncate">{p.name}</span>
-                    <span className="text-[10px] text-[var(--text-faint)] truncate">{p.model ?? "—"}</span>
-                    <span className="text-[10px] text-[var(--text-faint)]">{p.node_ids.length} / 2</span>
-                    <span className="text-[10px] text-[var(--text-faint)]">
+                    <span className="font-mono text-[12px] text-[var(--text)] truncate">{p.name}</span>
+                    <span className="font-mono text-[11px] text-[var(--text-faint)] truncate">{p.model ?? "—"}</span>
+                    <span className="font-mono text-[11px] text-[var(--text-faint)] tabular-nums">{p.node_ids.length} / 2</span>
+                    <span className="font-mono text-[11px] text-[var(--text-faint)] tabular-nums">
                       {p.price_per_token_usdc != null ? `${p.price_per_token_usdc} USDC` : "—"}
                     </span>
-                    <span className="text-[10px]" style={{ color: stage.color }}>{stage.label}</span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: stage.color }}>{stage.label}</span>
 
                     <div className="flex gap-1.5 flex-wrap justify-end">
                       {stage.step < 2 && (
@@ -599,7 +599,7 @@ export function OperatorClient() {
                         <>
                           <Link
                             href="/jobs/new"
-                            className="px-2.5 py-1 rounded text-[10px] uppercase tracking-[0.1em] border border-[#00ff9c44] text-[var(--green)] bg-[#00ff9c0a] hover:bg-[#00ff9c1a] transition-colors"
+                            className="px-2.5 py-1 rounded font-mono text-[10px] uppercase tracking-[0.08em] border border-[#00ff9c44] text-[var(--green)] bg-[#00ff9c0a] hover:bg-[#00ff9c1a] transition-colors"
                           >
                             Infer
                           </Link>
@@ -645,16 +645,16 @@ export function OperatorClient() {
 
       {/* Models */}
       <section className="mt-8">
-        <h2 className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.12em] mb-3">Available Models</h2>
+        <h2 className="text-[16px] font-medium text-[var(--text)] mb-3">Available Models</h2>
         <div className="flex flex-col gap-1.5">
           {Object.entries(mdls).map(([m, layers]) => (
             <div key={m} className="flex items-center justify-between px-4 py-2.5 rounded border border-[var(--border)] bg-[var(--bg-panel)]">
-              <span className="text-[12px] text-[var(--text)]">{m}</span>
-              <span className="text-[10px] text-[var(--text-faint)]">{layers} layers</span>
+              <span className="font-mono text-[13px] text-[var(--text)]">{m}</span>
+              <span className="font-mono text-[11px] text-[var(--text-faint)] tabular-nums">{layers} layers</span>
             </div>
           ))}
           {!loading && Object.keys(mdls).length === 0 && (
-            <span className="text-[11px] text-[var(--text-faint)] px-4">—</span>
+            <span className="text-[13px] text-[var(--text-faint)] px-4">—</span>
           )}
         </div>
       </section>

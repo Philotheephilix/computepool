@@ -22,17 +22,17 @@ export function INFTWallet({
       <INFTArt />
       <div>
         <h3
-          className="mb-1.5 text-[22px] font-normal italic text-[var(--text)]"
+          className="mb-1.5 text-[26px] font-normal italic leading-tight text-[var(--text)]"
           style={{ fontFamily: "var(--font-serif)" }}
         >
           Shard-07 · Llama-7B · layers 21–30
         </h3>
-        <div className="mb-3.5 text-[11px] text-[var(--text-muted)]">
+        <div className="mb-3.5 text-[12px] text-[var(--text-muted)]">
           iNFT{" "}
-          <b className="font-normal text-[var(--blue)]">0xA73f…891c · #07</b> ·
+          <b className="font-mono font-normal text-[var(--blue)]">0xA73f…891c · #07</b> ·
           ERC-7857
         </div>
-        <div className="flex flex-col gap-1.5 text-[11px] text-[var(--text-muted)]">
+        <div className="flex flex-col gap-1.5 text-[13px] text-[var(--text-muted)]">
           <span className="flex gap-2 before:content-['✓'] before:text-[var(--green)]">
             Embedded weights on 0G Storage (encrypted)
           </span>

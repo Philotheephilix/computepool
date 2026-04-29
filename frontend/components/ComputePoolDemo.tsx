@@ -46,9 +46,9 @@ export function ComputePoolDemo() {
         repHistory={demo.repHistory}
       />
 
-      <div className="mt-8 text-center text-[10px] uppercase tracking-[0.15em] text-[var(--text-faint)]">
+      <div className="mt-8 text-center">
         <span
-          className="text-[12px] normal-case tracking-normal text-[var(--text-muted)]"
+          className="text-[14px] italic text-[var(--text-muted)]"
           style={{ fontFamily: "var(--font-serif)" }}
         >
           — frontend reference for ComputePool · OpenAgents 2026 —

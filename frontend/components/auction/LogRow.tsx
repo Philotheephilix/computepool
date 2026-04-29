@@ -21,14 +21,14 @@ function verbToneClass(verb: AuctionLogRow["verb"]) {
 
 export function LogRow({ row }: { row: AuctionLogRow }) {
   const base =
-    "flex items-baseline gap-3 px-4 py-1 text-[12px] leading-[1.6] [animation:auctionFadeIn_0.25s_ease]";
+    "flex items-baseline gap-3 px-4 py-1 font-mono text-[12px] leading-[1.6] [animation:auctionFadeIn_0.25s_ease]";
 
   const winTone = row.win ? "text-[var(--green)] font-bold" : "";
   const verbTone = row.win ? "text-[var(--green)] font-bold" : verbToneClass(row.verb);
 
   return (
     <div className={[base, row.win ? "text-[var(--green)]" : ""].join(" ")}>
-      <span className="min-w-[38px] text-[10px] text-[var(--text-faint)]">
+      <span className="min-w-[38px] text-[10px] text-[var(--text-faint)] tabular-nums">
         {row.t}
       </span>
       <span className={["min-w-[90px]", agentToneClass(row.agentTone)].join(" ")}>

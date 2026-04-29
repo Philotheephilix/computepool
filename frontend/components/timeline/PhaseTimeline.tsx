@@ -20,7 +20,7 @@ export function PhaseTimeline({ activeStep }: { activeStep: number }) {
           <div
             key={s.n}
             className={[
-              "relative flex-1 overflow-hidden px-3.5 py-2.5 text-[10px] uppercase tracking-[0.1em] transition-colors duration-300",
+              "relative flex-1 overflow-hidden px-3.5 py-2.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors duration-300",
               isActive
                 ? "bg-[var(--bg-elev)] text-[var(--green)]"
                 : "bg-[var(--bg-panel)] text-[var(--text-faint)]",

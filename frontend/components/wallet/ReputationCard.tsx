@@ -15,14 +15,14 @@ export function ReputationCard({
 
   return (
     <div className="border-l border-[var(--border-soft)] pl-6 max-md:border-l-0 max-md:border-t max-md:border-[var(--border-soft)] max-md:pl-0 max-md:pt-3.5">
-      <div className="mb-2.5 text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)]">
+      <div className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-faint)]">
         Reputation
       </div>
-      <div className="mb-3 flex justify-between text-[11px]">
+      <div className="mb-3 flex justify-between text-[13px]">
         <span>Win rate</span>
         <span
           className={[
-            "font-medium text-[var(--text)]",
+            "font-mono font-medium text-[var(--text)] tabular-nums",
             winWarn ? "text-[var(--yellow)]" : "",
           ].join(" ")}
         >
@@ -42,9 +42,9 @@ export function ReputationCard({
           style={{ width: `${winPct}%` }}
         />
       </div>
-      <div className="mb-3 mt-2 flex justify-between text-[11px]">
+      <div className="mb-3 mt-2 flex justify-between text-[13px]">
         <span>SLA reliability</span>
-        <span className="font-medium text-[var(--text)]">{slaPct}%</span>
+        <span className="font-mono font-medium text-[var(--text)] tabular-nums">{slaPct}%</span>
       </div>
       <div className="relative mb-1.5 h-1 overflow-hidden bg-[var(--border-soft)]">
         <div
@@ -57,7 +57,7 @@ export function ReputationCard({
           <span
             key={i}
             className={[
-              "inline-flex h-3.5 w-3.5 items-center justify-center border border-[var(--border-soft)] text-[9px] text-[var(--text-faint)]",
+              "inline-flex h-3.5 w-3.5 items-center justify-center border border-[var(--border-soft)] font-mono text-[10px] text-[var(--text-faint)]",
               x === "w"
                 ? "border-[var(--green)] bg-[var(--green)] text-[var(--bg)]"
                 : "",

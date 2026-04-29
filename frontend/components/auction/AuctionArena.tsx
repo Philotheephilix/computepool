@@ -16,11 +16,11 @@ export function AuctionArena({
 }) {
   return (
     <section className="overflow-hidden border border-[var(--border)] bg-[var(--bg-panel)]">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
         <span>◆ Auction Arena</span>
         <div className="flex gap-[18px]">
           <span>
-            Round <b className="ml-1 font-medium text-[var(--text)]">{job.round}</b>
+            Round <b className="ml-1 font-medium text-[var(--text)] tabular-nums">{job.round}</b>
           </span>
         </div>
       </div>

@@ -85,12 +85,12 @@ export function AppNav() {
       <div className="px-5 py-5 border-b border-[var(--border)]">
         <Link href="/" className="block">
           <span
-            className="text-[16px] text-[var(--text)] block"
+            className="text-[18px] text-[var(--text)] block"
             style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}
           >
             ComputePool
           </span>
-          <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.15em] mt-0.5 block">
+          <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em] mt-0.5 block">
             v2 · OpenAgents
           </span>
         </Link>
@@ -106,7 +106,7 @@ export function AppNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded text-[12px] transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded text-[13px] transition-colors ${
                 isActive
                   ? "bg-[var(--bg-elev)] text-[var(--green)] border border-[var(--border-soft)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-elev)]"
@@ -124,10 +124,10 @@ export function AppNav() {
       <div className="p-4 border-t border-[var(--border)] flex flex-col gap-2">
         {isConnected && address && (
           <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">
+            <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
               {chain?.name ?? "0G"}
             </span>
-            <span className="text-[10px] text-[var(--blue)] font-mono truncate">
+            <span className="text-[11px] text-[var(--blue)] font-mono truncate">
               {address.slice(0, 8)}…{address.slice(-4)}
             </span>
           </div>
@@ -140,11 +140,11 @@ export function AppNav() {
                 className="w-1.5 h-1.5 rounded-full bg-[var(--green)] shrink-0"
                 style={{ animation: "pulse 2s infinite" }}
               />
-              <span className="text-[11px] text-[var(--text-muted)] truncate">{username}</span>
+              <span className="text-[12px] text-[var(--text-muted)] truncate">{username}</span>
             </div>
             <button
               onClick={signOut}
-              className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em] hover:text-[var(--red)] transition-colors"
+              className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em] hover:text-[var(--red)] transition-colors text-left"
             >
               Sign out
             </button>
@@ -152,7 +152,7 @@ export function AppNav() {
         ) : (
           <Link
             href="/connect"
-            className="flex items-center gap-2 text-[10px] hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 text-[12px] hover:opacity-80 transition-opacity"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-faint)] shrink-0" />
             <span className="text-[var(--text-faint)]">Sign in</span>

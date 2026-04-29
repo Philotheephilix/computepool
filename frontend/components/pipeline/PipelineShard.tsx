@@ -47,6 +47,7 @@ export function PipelineShard({
         fill="var(--text)"
         fontSize={11}
         fontWeight={500}
+        style={{ fontFamily: "var(--font-mono)" }}
       >
         {id}
       </text>
@@ -55,7 +56,8 @@ export function PipelineShard({
         y={44}
         textAnchor="middle"
         fill="var(--text-muted)"
-        fontSize={9}
+        fontSize={10}
+        style={{ fontFamily: "var(--font-mono)" }}
       >
         {label}
       </text>

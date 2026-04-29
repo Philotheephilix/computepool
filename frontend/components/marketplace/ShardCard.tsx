@@ -27,11 +27,11 @@ export function ShardCard({
         <ShardArt num={shard.num} layerGroup={shard.layerGroup} size={64} />
         <div className="flex-1 min-w-0 flex flex-col gap-1 pt-0.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] text-[var(--text)] truncate">
+            <span className="text-[14px] font-medium text-[var(--text)] truncate">
               Shard-{shard.num}
             </span>
             <span
-              className="text-[9px] px-1.5 py-0.5 rounded border shrink-0"
+              className="font-mono text-[10px] px-1.5 py-0.5 rounded border shrink-0"
               style={{
                 color: accentColor,
                 borderColor: `${accentColor}44`,
@@ -42,7 +42,7 @@ export function ShardCard({
             </span>
           </div>
 
-          <span className="text-[10px] text-[var(--text-faint)] truncate">
+          <span className="font-mono text-[11px] text-[var(--text-faint)] truncate">
             {shard.tokenId} · ERC-7857
           </span>
 
@@ -51,7 +51,7 @@ export function ShardCard({
               className="w-1.5 h-1.5 rounded-full shrink-0"
               style={{ background: statusColor }}
             />
-            <span className="text-[10px]" style={{ color: statusColor }}>
+            <span className="text-[12px]" style={{ color: statusColor }}>
               {STATUS_LABEL[shard.status]}
             </span>
           </div>
@@ -59,9 +59,9 @@ export function ShardCard({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">
+        <div className="flex items-center justify-between font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
           <span>Reputation</span>
-          <span>{shard.reputation}%</span>
+          <span className="tabular-nums">{shard.reputation}%</span>
         </div>
         <div className="h-1 w-full rounded-full bg-[var(--bg-elev)] overflow-hidden">
           <div
@@ -81,12 +81,12 @@ export function ShardCard({
 
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">Bid</span>
-          <span className="text-[13px] text-[var(--green)]">{shard.bidEth.toFixed(2)} ETH</span>
+          <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">Bid</span>
+          <span className="font-mono text-[14px] text-[var(--green)] tabular-nums">{shard.bidEth.toFixed(2)} ETH</span>
         </div>
         <div className="flex flex-col gap-0.5 text-right">
-          <span className="text-[9px] text-[var(--text-faint)] uppercase tracking-[0.1em]">SLA</span>
-          <span className="text-[12px] text-[var(--text-muted)]">{shard.slaSeconds}s</span>
+          <span className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">SLA</span>
+          <span className="font-mono text-[13px] text-[var(--text-muted)] tabular-nums">{shard.slaSeconds}s</span>
         </div>
       </div>
     </button>

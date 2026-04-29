@@ -36,7 +36,16 @@ export function ShardArt({
       <rect x="14" y="14" width="52" height="52" fill="#0a0a0b" stroke={accent} strokeWidth="1" />
       <rect x="20" y="20" width="40" height="40" fill="none" stroke={accent} strokeWidth="0.5" opacity="0.35" />
 
-      <text x="40" y="35" textAnchor="middle" fill={accent} fontSize="5.5" fontWeight="500" letterSpacing="1.5">
+      <text
+        x="40"
+        y="35"
+        textAnchor="middle"
+        fill={accent}
+        fontSize="5.5"
+        fontWeight="500"
+        letterSpacing="1.5"
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
         SHARD
       </text>
       <text
