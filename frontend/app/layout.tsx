@@ -16,8 +16,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "ComputePool · Live Demo",
-  description: "A market of intelligent NFTs — auto-playing hackathon demo.",
+  title: "ComputePool · OpenAgents 2026",
+  description: "A market of intelligent NFTs that bid against each other to run your AI model.",
 };
 
 export default function RootLayout({
