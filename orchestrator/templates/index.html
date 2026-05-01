@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>dis-com</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --border: #e3e7ee;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2962ff;
+      --success: #16a34a;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.45; }
+    header { padding: 18px 28px; border-bottom: 1px solid var(--border); background: var(--card); display: flex; align-items: center; justify-content: space-between; }
+    header h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+    header .who { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+    main { max-width: 1100px; margin: 24px auto; padding: 0 24px; display: grid; gap: 18px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+    .card h2 { margin: 0 0 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .card .head-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .card .head-row h2 { margin: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    tr:last-child td { border-bottom: none; }
+    .mono { font-family: var(--mono); font-size: 12px; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: #94a3b8; }
+    .dot.loaded { background: var(--success); }
+    .dot.configured { background: var(--accent); }
+    .dot.registered { background: var(--warn); }
+    .dot.unhealthy { background: var(--danger); }
+    button { font: inherit; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--text); }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.danger { color: var(--danger); border-color: #fecaca; }
+    button.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 4px 8px; }
+    button:hover:not(:disabled) { filter: brightness(0.97); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    textarea, input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; width: 100%; color: var(--text); }
+    textarea { font-family: var(--mono); font-size: 13px; resize: vertical; }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+    .grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; align-items: end; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: none; align-items: center; justify-content: center; z-index: 10; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--card); border-radius: 10px; padding: 22px; width: 440px; max-width: 92%; }
+    .modal h3 { margin: 0 0 14px; font-size: 16px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; border: 1px solid var(--border); color: var(--muted); margin-left: 6px; background: #f8fafc; }
+    .badge.on { color: var(--success); border-color: #bbf7d0; background: #f0fdf4; }
+    .badge.off { color: var(--muted); }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 10px; border-radius: 999px; background: #eef2ff; color: #1e3a8a; font-family: var(--mono); font-size: 12px; margin: 2px 4px 2px 0; }
+    .chip button { all: unset; cursor: pointer; color: #1e3a8a; opacity: 0.6; font-size: 14px; line-height: 1; padding: 0 2px; }
+    .chip button:hover { opacity: 1; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .tabs button { background: transparent; border: none; padding: 8px 14px; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); }
+    .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
+    .hint { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-family: var(--mono); font-size: 12px; color: var(--text); margin-bottom: 12px; white-space: pre-wrap; }
+    .hint .controls { display: flex; gap: 6px; margin-top: 6px; }
+    .pool-card { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; background: #fff; }
+    .pool-card h3 { margin: 0; font-size: 15px; display: flex; align-items: center; flex-wrap: wrap; }
+    .pool-meta { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; font-size: 13px; margin-top: 10px; }
+    .pool-meta .k { color: var(--muted); }
+    .pool-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .response { margin-top: 12px; padding: 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 13px; white-space: pre-wrap; min-height: 40px; }
+    .meta-line { font-size: 12px; color: var(--muted); margin-top: 8px; font-family: var(--mono); }
+    details { margin-top: 8px; font-size: 12px; }
+    details summary { cursor: pointer; color: var(--muted); }
+    details pre { background: #f8fafc; padding: 10px; border-radius: 6px; font-family: var(--mono); font-size: 11px; overflow: auto; border: 1px solid var(--border); }
+    .key-line { display: inline-flex; align-items: center; gap: 6px; }
+    .key-line code { font-family: var(--mono); font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+    @media (max-width: 700px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } .pool-meta { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>dis-com</h1>
+    <div class="who" id="who"></div>
+  </header>
+
+  <main>
+    <section class="card" id="auth-section" style="display:none;">
+      <div class="tabs">
+        <button id="tab-login" class="active" data-action="auth-tab" data-tab="login">Login</button>
+        <button id="tab-register" data-action="auth-tab" data-tab="register">Register</button>
+      </div>
+      <form id="auth-form">
+        <div class="grid-2">
+          <div><label for="auth-username">Username</label><input id="auth-username" autocomplete="username" required /></div>
+          <div><label for="auth-password">Password</label><input id="auth-password" type="password" autocomplete="current-password" required /></div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button type="submit" class="primary" id="auth-submit">Login</button>
+          <span class="err" id="auth-err"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" id="nodes-section" style="display:none;">
+      <div class="head-row"><h2>Nodes</h2></div>
+      <div class="hint" id="worker-hint"></div>
+      <table>
+        <thead><tr>
+          <th>node_id</th><th>ip</th><th>peer_id</th><th>status</th><th>pool</th><th>last_seen</th><th></th>
+        </tr></thead>
+        <tbody id="nodes-tbody"></tbody>
+      </table>
+    </section>
+
+    <section class="card" id="pools-section" style="display:none;">
+      <div class="head-row">
+        <h2>Pools</h2>
+        <button class="primary" data-action="open-create-pool">Create pool</button>
+      </div>
+      <div id="pools-list"></div>
+    </section>
+
+    <section class="card" id="infer-section" style="display:none;">
+      <div class="head-row"><h2>Inference</h2></div>
+      <div class="grid-3">
+        <div>
+          <label for="infer-pool">Pool</label>
+          <select id="infer-pool"></select>
+        </div>
+        <div>
+          <label for="max-tokens">Max tokens</label>
+          <input id="max-tokens" type="number" value="32" min="1" max="4096" />
+        </div>
+        <div>
+          <label for="temperature">Temperature</label>
+          <input id="temperature" type="number" step="0.1" min="0" max="2" value="0.0" />
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label for="prompt">Prompt</label>
+        <textarea id="prompt" rows="4" placeholder="Ask something..."></textarea>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button class="primary" id="generate-btn" data-action="infer">Generate</button>
+      </div>
+      <div id="infer-result"></div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="modal-bd">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+<script>
+const LS_KEY = "discom_api_key";
+const LS_USER = "discom_username";
+let STATE = null;
+let pollTimer = null;
+let authTab = "login";
+
+function getKey() { return localStorage.getItem(LS_KEY); }
+function getUser() { return localStorage.getItem(LS_USER); }
+function isLoggedIn() { return !!getKey(); }
+
+async function api(path, init) {
+  init = init || {};
+  init.headers = Object.assign({}, init.headers || {});
+  if (isLoggedIn()) init.headers["X-API-Key"] = getKey();
+  if (init.method && init.method !== "GET" && !init.headers["Content-Type"]) init.headers["Content-Type"] = "application/json";
+  const r = await fetch(path, init);
+  if (r.status === 401) {
+    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(LS_USER);
+    STATE = null;
+    render();
+    throw new Error("unauthorized");
+  }
+  let data = null;
+  try { data = await r.json(); } catch (e) {}
+  if (!r.ok) {
+    const msg = (data && (data.detail || data.message)) || `HTTP ${r.status}`;
+    const err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+    err.status = r.status;
+    throw err;
+  }
+  return data;
+}
+
+async function withSpin(btn, fn) {
+  if (!btn) return fn();
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span>${orig}`;
+  try { return await fn(); }
+  finally { btn.disabled = false; btn.innerHTML = orig; }
+}
+
+async function mutate(btn, label, fn) {
+  await withSpin(btn, async () => {
+    try { await fn(); await pollState(true); }
+    catch (e) { alert(label + " failed: " + e.message); }
+  });
+}
+
+function maskKey(k) {
+  if (!k) return "";
+  if (k.length <= 8) return k;
+  return "•".repeat(8) + k.slice(-8);
+}
+
+function timeAgo(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 10) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return d.toLocaleString();
+}
+
+function copy(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = "copied";
+      setTimeout(() => { btn.textContent = orig; }, 1000);
+    }
+  });
+}
+
+function escapeHTML(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]);
+}
+
+function switchAuthTab(t) {
+  authTab = t;
+  document.getElementById("tab-login").classList.toggle("active", t === "login");
+  document.getElementById("tab-register").classList.toggle("active", t === "register");
+  document.getElementById("auth-submit").textContent = t === "login" ? "Login" : "Register";
+  document.getElementById("auth-err").textContent = "";
+}
+
+async function submitAuth(ev) {
+  ev.preventDefault();
+  const username = document.getElementById("auth-username").value.trim();
+  const password = document.getElementById("auth-password").value;
+  const errEl = document.getElementById("auth-err");
+  errEl.textContent = "";
+  if (authTab === "register" && password.length < 6) {
+    errEl.textContent = "Password must be at least 6 characters.";
+    return;
+  }
+  const btn = document.getElementById("auth-submit");
+  await withSpin(btn, async () => {
+    try {
+      const r = await fetch(authTab === "login" ? "/auth/login" : "/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        errEl.textContent = data.detail || (r.status === 409 ? "User already exists." : r.status === 401 ? "Invalid credentials." : `Error ${r.status}`);
+        return;
+      }
+      localStorage.setItem(LS_KEY, data.api_key);
+      localStorage.setItem(LS_USER, data.username);
+      await pollState(true);
+      render();
+    } catch (e) {
+      errEl.textContent = "Network error: " + e.message;
+    }
+  });
+}
+
+function logout() {
+  localStorage.removeItem(LS_KEY);
+  localStorage.removeItem(LS_USER);
+  STATE = null;
+  render();
+}
+
+let keyShown = false;
+function renderHeader() {
+  const who = document.getElementById("who");
+  if (!isLoggedIn()) { who.innerHTML = ""; return; }
+  const user = escapeHTML(getUser() || "");
+  const key = getKey();
+  const display = keyShown ? `<code>${escapeHTML(key)}</code> <button class="ghost" data-action="copy-key">copy</button>` : `<code>${maskKey(key)}</code>`;
+  who.innerHTML = `<span>logged in as <strong>${user}</strong></span>
+    <span class="key-line">${display}<button class="ghost" data-action="toggle-key">${keyShown ? "hide" : "show"} API key</button></span>
+    <button data-action="logout">log out</button>`;
+}
+
+function toggleKey() { keyShown = !keyShown; renderHeader(); }
+
+let hintShowKey = false;
+function renderHint() {
+  const el = document.getElementById("worker-hint");
+  const key = getKey() || "";
+  const shown = hintShowKey ? key : maskKey(key);
+  const host = window.location.host || "<this-host>:8000";
+  el.innerHTML = `Run a worker on any host with:
+  OWNER_API_KEY=${escapeHTML(shown)}  ORCHESTRATOR_URL=http://${escapeHTML(host)}  docker compose up node-a
+<div class="controls"><button class="ghost" data-action="toggle-hint-key">${hintShowKey ? "hide" : "show"} key</button><button class="ghost" data-action="copy-hint">copy</button></div>`;
+}
+
+function renderNodes() {
+  const tbody = document.getElementById("nodes-tbody");
+  const nodes = (STATE && STATE.nodes) || [];
+  if (!nodes.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">No nodes yet — start a worker with your API key.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = nodes.map(n => {
+    const peerFull = n.axl_peer_id || "";
+    const peerShort = peerFull ? peerFull.slice(0, 10) + "…" : "—";
+    const pool = n.pool_name ? escapeHTML(n.pool_name) : `<span style="color:var(--warn)">— available</span>`;
+    const inPool = !!n.pool_name;
+    const status = n.status || "registered";
+    return `<tr>
+      <td class="mono">${escapeHTML(n.node_id)}</td>
+      <td class="mono">${escapeHTML(n.ip_address || "—")}</td>
+      <td class="mono" title="click to copy" style="cursor:pointer;" data-action="copy-text" data-text="${escapeHTML(peerFull)}">${escapeHTML(peerShort)}</td>
+      <td><span class="dot ${escapeHTML(status)}"></span>${escapeHTML(status)}</td>
+      <td>${pool}</td>
+      <td class="mono">${escapeHTML(timeAgo(n.last_seen))}</td>
+      <td><button class="danger" ${inPool ? "disabled" : ""} data-action="remove-node" data-node-id="${escapeHTML(n.node_id)}">Remove</button></td>
+    </tr>`;
+  }).join("");
+}
+
+async function removeNode(id, btn) {
+  if (!confirm(`Remove node ${id}?`)) return;
+  await mutate(btn, "Remove", () => api(`/nodes/${encodeURIComponent(id)}`, { method: "DELETE" }));
+}
+
+function renderPools() {
+  const list = document.getElementById("pools-list");
+  const pools = (STATE && STATE.pools) || [];
+  const nodes = (STATE && STATE.nodes) || [];
+  if (!pools.length) {
+    list.innerHTML = `<div class="empty">No pools — create one to start splitting models.</div>`;
+    return;
+  }
+  list.innerHTML = pools.map(p => {
+    const initBadge = p.initialized ? `<span class="badge on">initialized</span>` : `<span class="badge off">not initialized</span>`;
+    const loadBadge = p.loaded ? `<span class="badge on">loaded</span>` : `<span class="badge off">not loaded</span>`;
+    const memberIds = p.node_ids || [];
+    const chips = memberIds.length ? memberIds.map(id => `<span class="chip">${escapeHTML(id)} <button data-action="pool-remove-node" data-pool="${escapeHTML(p.name)}" data-node-id="${escapeHTML(id)}" title="remove">×</button></span>`).join("") : `<span class="empty" style="padding:0;">no nodes</span>`;
+    const available = nodes.filter(n => !n.pool_name);
+    const addOptions = available.length
+      ? `<select data-add-select="${escapeHTML(p.name)}"><option value="">add node…</option>${available.map(n => `<option value="${escapeHTML(n.node_id)}">${escapeHTML(n.node_id)}</option>`).join("")}</select>
+         <button data-action="pool-add-node" data-pool="${escapeHTML(p.name)}">Add</button>`
+      : `<span class="empty" style="padding:0;">no available nodes</span>`;
+    let assignmentsHtml = "";
+    if (p.assignments && p.assignments.length) {
+      assignmentsHtml = p.assignments.map(a => `<span class="mono">${escapeHTML(a.node_id)} ${escapeHTML(a.role)} [${a.layers ? a.layers[0] + "–" + a.layers[1] : "?"}]</span>`).join(" · ");
+    } else {
+      assignmentsHtml = `<span class="empty" style="padding:0;">—</span>`;
+    }
+    const canInit = !p.loaded && memberIds.length > 0;
+    const canLoad = p.initialized && !p.loaded;
+    const canUnload = p.loaded;
+    const canDelete = !p.loaded;
+    return `<div class="pool-card">
+      <div class="head-row" style="margin-bottom:8px;">
+        <h3>${escapeHTML(p.name)} ${initBadge} ${loadBadge}</h3>
+        <div class="pool-actions">
+          <button data-action="pool-init" data-pool="${escapeHTML(p.name)}" ${canInit ? "" : "disabled"}>Initialize</button>
+          <button class="primary" data-action="pool-load" data-pool="${escapeHTML(p.name)}" ${canLoad ? "" : "disabled"}>Load</button>
+          <button data-action="pool-unload" data-pool="${escapeHTML(p.name)}" ${canUnload ? "" : "disabled"}>Unload</button>
+          <button class="danger" data-action="pool-delete" data-pool="${escapeHTML(p.name)}" ${canDelete ? "" : "disabled"}>Delete</button>
+        </div>
+      </div>
+      <div><strong style="font-size:12px;color:var(--muted);">members</strong><div style="margin-top:6px;">${chips}</div></div>
+      <div class="row" style="margin-top:8px;">${addOptions}</div>
+      <div class="pool-meta">
+        <div class="k">model</div><div class="mono">${escapeHTML(p.model || "—")}</div>
+        <div class="k">price/token</div><div class="mono">${p.price_per_token_usdc != null ? p.price_per_token_usdc : "—"} ${escapeHTML(p.currency || "USDC")}</div>
+        <div class="k">assignments</div><div>${assignmentsHtml}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function addPoolNode(poolName, btn) {
+  const sel = document.querySelector(`select[data-add-select="${CSS.escape(poolName)}"]`);
+  if (!sel || !sel.value) return;
+  await mutate(btn, "Add", () => api(`/pools/${encodeURIComponent(poolName)}/nodes`, { method: "POST", body: JSON.stringify({ node_ids: [sel.value] }) }));
+}
+
+async function removePoolNode(poolName, nodeId, btn) {
+  await mutate(btn, "Remove", () => api(`/pools/${encodeURIComponent(poolName)}/nodes/${encodeURIComponent(nodeId)}`, { method: "DELETE" }));
+}
+
+async function poolAction(poolName, action, btn) {
+  await mutate(btn, action, () => api(`/pools/${encodeURIComponent(poolName)}/${action}`, { method: "POST" }));
+}
+
+async function deletePool(name, btn) {
+  if (!confirm(`Delete pool ${name}?`)) return;
+  await mutate(btn, "Delete", () => api(`/pools/${encodeURIComponent(name)}`, { method: "DELETE" }));
+}
+
+function openModal(html) {
+  document.getElementById("modal-content").innerHTML = html;
+  document.getElementById("modal-bd").classList.add("open");
+}
+function closeModal() { document.getElementById("modal-bd").classList.remove("open"); }
+
+function openCreatePool() {
+  openModal(`<h3>Create pool</h3>
+    <label for="m-pool-name">Name</label>
+    <input id="m-pool-name" placeholder="my-pool" />
+    <div class="err" id="m-err"></div>
+    <div class="modal-actions">
+      <button data-action="close-modal">Cancel</button>
+      <button class="primary" id="m-go" data-action="submit-create-pool">Create</button>
+    </div>`);
+  setTimeout(() => document.getElementById("m-pool-name").focus(), 0);
+}
+
+async function submitCreatePool(btn) {
+  const name = document.getElementById("m-pool-name").value.trim();
+  const err = document.getElementById("m-err");
+  err.textContent = "";
+  if (!name) { err.textContent = "Name required."; return; }
+  await withSpin(btn, async () => {
+    try { await api("/pools", { method: "POST", body: JSON.stringify({ name }) }); closeModal(); await pollState(true); }
+    catch (e) { err.textContent = e.message; }
+  });
+}
+
+function openInitPool(poolName) {
+  const models = (STATE && STATE.models) || {};
+  const opts = Object.keys(models).map(m => `<option value="${escapeHTML(m)}">${escapeHTML(m)} (${models[m]} layers)</option>`).join("");
+  const pool = (STATE.pools || []).find(p => p.name === poolName) || {};
+  const curModel = pool.model || "";
+  const curPrice = pool.price_per_token_usdc != null ? pool.price_per_token_usdc : 0.0001;
+  openModal(`<h3>Initialize ${escapeHTML(poolName)}</h3>
+    <label for="m-model">Model</label>
+    <select id="m-model">${opts}</select>
+    <div class="grid-2" style="margin-top:10px;">
+      <div><label for="m-price">Price per token</label><input id="m-price" type="number" step="0.00001" min="0" value="${curPrice}" /></div>
+      <div><label>Currency</label><input value="USDC" disabled /></div>
+    </div>
+    <div class="err" id="m-err"></div>
+    <div class="modal-actions">
+      <button data-action="close-modal">Cancel</button>
+      <button class="primary" id="m-go" data-action="submit-init-pool" data-pool="${escapeHTML(poolName)}">Initialize</button>
+    </div>`);
+  if (curModel) document.getElementById("m-model").value = curModel;
+}
+
+async function submitInitPool(poolName, btn) {
+  const model = document.getElementById("m-model").value;
+  const price = parseFloat(document.getElementById("m-price").value);
+  const err = document.getElementById("m-err");
+  err.textContent = "";
+  if (!model) { err.textContent = "Pick a model."; return; }
+  if (!(price >= 0)) { err.textContent = "Price must be ≥ 0."; return; }
+  await withSpin(btn, async () => {
+    try {
+      await api(`/pools/${encodeURIComponent(poolName)}/initialize`, { method: "POST", body: JSON.stringify({ model, price_per_token_usdc: price, currency: "USDC" }) });
+      closeModal(); await pollState(true);
+    } catch (e) { err.textContent = e.message; }
+  });
+}
+
+function renderInfer() {
+  const section = document.getElementById("infer-section");
+  const loaded = ((STATE && STATE.pools) || []).filter(p => p.loaded);
+  if (!loaded.length) { section.style.display = "none"; return; }
+  section.style.display = "";
+  const sel = document.getElementById("infer-pool");
+  const prev = sel.value;
+  sel.innerHTML = loaded.map(p => `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)} (${escapeHTML(p.model || "")})</option>`).join("");
+  if (prev && loaded.some(p => p.name === prev)) sel.value = prev;
+}
+
+async function runInfer(btn) {
+  const pool = document.getElementById("infer-pool").value;
+  if (!pool) { alert("No pool selected."); return; }
+  const prompt = document.getElementById("prompt").value;
+  const max_tokens = parseInt(document.getElementById("max-tokens").value, 10) || 32;
+  const temperature = parseFloat(document.getElementById("temperature").value) || 0;
+  const out = document.getElementById("infer-result");
+  out.innerHTML = `<div class="response">Generating…</div>`;
+  await withSpin(btn, async () => {
+    try {
+      const data = await api(`/pools/${encodeURIComponent(pool)}/infer`, {
+        method: "POST",
+        body: JSON.stringify({ prompt, max_tokens, temperature }),
+      });
+      const elapsed = (data.elapsed_s != null ? Number(data.elapsed_s).toFixed(2) : "?");
+      const tps = (data.tokens_per_sec != null ? Number(data.tokens_per_sec).toFixed(2) : "?");
+      const cost = (data.cost_usdc != null ? Number(data.cost_usdc).toFixed(6) : "?");
+      out.innerHTML = `<div class="response">${escapeHTML(data.text || "")}</div>
+        <div class="meta-line">${data.tokens || 0} tokens · ${elapsed} s · ${tps} tok/s · cost: ${cost} ${escapeHTML(data.currency || "USDC")} · entry: ${escapeHTML(data.entry_node || "?")} · exit: ${escapeHTML(data.exit_node || "?")}</div>
+        <details><summary>raw timings</summary><pre>${escapeHTML(JSON.stringify(data.timings || {}, null, 2))}</pre></details>`;
+      out.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (e) {
+      out.innerHTML = `<div class="response" style="color:var(--danger);">Error: ${escapeHTML(e.message)}</div>`;
+    }
+  });
+}
+
+async function pollState(force) {
+  if (!isLoggedIn()) return;
+  try {
+    const data = await api("/api/state");
+    STATE = data;
+    renderNodes();
+    renderPools();
+    renderInfer();
+    renderHint();
+  } catch (e) { /* 401 already handled */ }
+}
+
+function render() {
+  renderHeader();
+  const auth = document.getElementById("auth-section");
+  const nodes = document.getElementById("nodes-section");
+  const pools = document.getElementById("pools-section");
+  if (isLoggedIn()) {
+    auth.style.display = "none";
+    nodes.style.display = "";
+    pools.style.display = "";
+    renderHint();
+    renderNodes();
+    renderPools();
+    renderInfer();
+    if (!pollTimer) pollTimer = setInterval(pollState, 3000);
+  } else {
+    auth.style.display = "";
+    nodes.style.display = "none";
+    pools.style.display = "none";
+    document.getElementById("infer-section").style.display = "none";
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+}
+
+document.getElementById("modal-bd").addEventListener("click", e => {
+  if (e.target.id === "modal-bd") closeModal();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+document.getElementById("auth-form").addEventListener("submit", submitAuth);
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-action]");
+  if (!t) return;
+  const action = t.dataset.action;
+  const pool = t.dataset.pool || "";
+  const nodeId = t.dataset.nodeId || "";
+  switch (action) {
+    case "auth-tab": switchAuthTab(t.dataset.tab); break;
+    case "logout": logout(); break;
+    case "toggle-key": toggleKey(); break;
+    case "copy-key": copy(getKey() || "", t); break;
+    case "toggle-hint-key": hintShowKey = !hintShowKey; renderHint(); break;
+    case "copy-hint":
+      copy(`OWNER_API_KEY=${getKey() || ""}  ORCHESTRATOR_URL=http://${window.location.host}  docker compose up node-a`, t);
+      break;
+    case "copy-text": copy(t.dataset.text || "", t); break;
+    case "remove-node": removeNode(nodeId, t); break;
+    case "open-create-pool": openCreatePool(); break;
+    case "submit-create-pool": submitCreatePool(t); break;
+    case "close-modal": closeModal(); break;
+    case "pool-add-node": addPoolNode(pool, t); break;
+    case "pool-remove-node": removePoolNode(pool, nodeId, t); break;
+    case "pool-init": openInitPool(pool); break;
+    case "pool-load": poolAction(pool, "load", t); break;
+    case "pool-unload": poolAction(pool, "unload", t); break;
+    case "pool-delete": deletePool(pool, t); break;
+    case "submit-init-pool": submitInitPool(pool, t); break;
+    case "infer": runInfer(t); break;
+  }
+});
+
+render();
+if (isLoggedIn()) pollState(true);
+</script>
+</body>
+</html>
