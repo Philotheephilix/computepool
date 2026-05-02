@@ -30,12 +30,13 @@ USDC_TRANSFER_AUTH_TYPES = {
 }
 
 
-def build_typed_data(*, usdc_address: str, chain_id: int, authorization: dict) -> dict:
+def build_typed_data(*, usdc_address: str, chain_id: int, authorization: dict,
+                     domain_name: str = "USD Coin", domain_version: str = "2") -> dict:
     return {
         "types": USDC_TRANSFER_AUTH_TYPES,
         "domain": {
-            "name": "USDC",
-            "version": "2",
+            "name": domain_name,
+            "version": domain_version,
             "chainId": chain_id,
             "verifyingContract": usdc_address,
         },
@@ -51,8 +52,12 @@ def build_typed_data(*, usdc_address: str, chain_id: int, authorization: dict) -
     }
 
 
-def recover_signer(usdc_address: str, chain_id: int, authorization: dict, signature: str) -> str:
-    typed = build_typed_data(usdc_address=usdc_address, chain_id=chain_id, authorization=authorization)
+def recover_signer(usdc_address: str, chain_id: int, authorization: dict, signature: str,
+                   domain_name: str = "USD Coin", domain_version: str = "2") -> str:
+    typed = build_typed_data(
+        usdc_address=usdc_address, chain_id=chain_id, authorization=authorization,
+        domain_name=domain_name, domain_version=domain_version,
+    )
     msg = encode_typed_data(full_message=typed)
     return Account.recover_message(msg, signature=signature)
 

@@ -59,14 +59,14 @@ class Chain:
             "nonce": nonce_count,
             "chainId": await self.w3.eth.chain_id,
         })
-        # Add 20% gas buffer
         try:
             est = await self.w3.eth.estimate_gas(tx)
             tx["gas"] = int(est * 1.2)
         except Exception:
             tx["gas"] = 200_000
         signed = self.relayer.sign_transaction(tx)
-        tx_hash = await self.w3.eth.send_raw_transaction(signed.rawTransaction)
+        raw = getattr(signed, "raw_transaction", None) or getattr(signed, "rawTransaction", None)
+        tx_hash = await self.w3.eth.send_raw_transaction(raw)
         receipt = await self.w3.eth.wait_for_transaction_receipt(tx_hash)
         return {
             "tx_hash": tx_hash.hex(),
