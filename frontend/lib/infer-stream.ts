@@ -39,7 +39,14 @@ export async function* streamInfer(args: StreamArgs): AsyncGenerator<InferEvent>
 
   if (!res.ok || !res.body) {
     const txt = await res.text().catch(() => "");
-    throw new Error(`infer/stream HTTP ${res.status}: ${txt.slice(0, 400)}`);
+    // Try to surface the orchestrator's `.error` field instead of the whole
+    // accepts envelope so the toast/banner is readable.
+    let detail = txt.slice(0, 800);
+    try {
+      const j = JSON.parse(txt);
+      if (typeof j?.error === "string") detail = j.error;
+    } catch { /* leave raw */ }
+    throw new Error(`infer/stream HTTP ${res.status}: ${detail}`);
   }
 
   const reader = res.body.getReader();
@@ -63,6 +70,46 @@ export async function* streamInfer(args: StreamArgs): AsyncGenerator<InferEvent>
       }
     }
   }
+}
+
+/**
+ * POST /pools/{name}/infer/verify with the signed X-PAYMENT. Returns the
+ * facilitator's verdict (and the requirements the orchestrator built) so
+ * the UI can confirm a payment will be accepted before navigating to the
+ * streaming page. Always 200 — read .isValid / .invalidReason.
+ */
+export async function verifyPayment(args: {
+  poolName: string;
+  prompt: string;
+  maxTokens: number;
+  apiKey: string;
+  xPayment: string;
+  temperature?: number;
+}): Promise<{
+  isValid: boolean;
+  invalidReason?: string | null;
+  payer?: string;
+  requirements: PaymentRequirements;
+}> {
+  const url = `${BASE}/pools/${encodeURIComponent(args.poolName)}/infer/verify`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": args.apiKey,
+      "X-PAYMENT": args.xPayment,
+    },
+    body: JSON.stringify({
+      prompt: args.prompt,
+      max_tokens: args.maxTokens,
+      temperature: args.temperature ?? 0.0,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`infer/verify HTTP ${res.status}: ${txt.slice(0, 800)}`);
+  }
+  return res.json();
 }
 
 /**

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useT, FONT_DISPLAY, FONT_BODY, FONT_MONO } from "@/components/cp/theme";
 import { Badge, Button, Card, RowKV } from "@/components/cp/primitives";
 import { useInferState } from "@/lib/use-infer-state";
-import { fetchPaymentRequirements } from "@/lib/infer-stream";
+import { fetchPaymentRequirements, verifyPayment } from "@/lib/infer-stream";
 import { signX402, signX402WithWallet } from "@/lib/sign-payment";
 import { loadAuth, loadDemoPayerKey, loadChainId } from "@/lib/auth-store";
 import { useWallet } from "@/lib/use-wallet";
@@ -17,6 +17,7 @@ export default function InferStep3() {
   const [ph, setPh] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
+  const [phaseLabel, setPhaseLabel] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const id = setInterval(() => setPh((p) => p + 1), 100);
@@ -41,6 +42,7 @@ export default function InferStep3() {
 
   const confirm = async () => {
     setErr(null);
+    setPhaseLabel(null);
     if (!live) {
       router.push("/infer/active");
       return;
@@ -49,8 +51,10 @@ export default function InferStep3() {
     setBusy(true);
     try {
       if (useWalletSigning && !wallet.rightChain) {
+        setPhaseLabel("Switching wallet to 0G Galileo…");
         await switchChain();
       }
+      setPhaseLabel("Fetching x402 payment requirements…");
       const requirements = await fetchPaymentRequirements({
         poolName: state.poolName,
         prompt: state.prompt,
@@ -58,15 +62,37 @@ export default function InferStep3() {
         apiKey: auth.apiKey,
       });
       const chainId = loadChainId();
+      setPhaseLabel(useWalletSigning ? "Waiting for wallet signature…" : "Signing locally…");
       const { header, payer } = useWalletSigning
         ? await signX402WithWallet({ account: wallet.address!, requirements, chainId })
         : await signX402({ privateKey: demoKey!, requirements, chainId });
-      setState({ ...state, xPayment: header, payer, requirements });
+
+      // PRE-VERIFY before navigating: hits the orchestrator's verify-only
+      // route which calls the facilitator with the same X-PAYMENT we'd send
+      // to /infer/stream. If the facilitator rejects (insufficient balance,
+      // bad sig, expired auth, replayed nonce), we keep the user here and
+      // surface the real reason instead of failing one screen later.
+      setPhaseLabel("Confirming payment with facilitator…");
+      const v = await verifyPayment({
+        poolName: state.poolName,
+        prompt: state.prompt,
+        maxTokens: state.maxTokens,
+        apiKey: auth.apiKey,
+        xPayment: header,
+      });
+      if (!v.isValid) {
+        setErr(`Facilitator rejected the payment: ${v.invalidReason ?? "unknown"}`);
+        return;
+      }
+
+      setState({ ...state, xPayment: header, payer: v.payer ?? payer, requirements });
+      setPhaseLabel("Verified — starting stream…");
       router.push("/infer/active");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
       setBusy(false);
+      // leave phaseLabel set if we navigated; cleared only on next click
     }
   };
 
@@ -152,10 +178,25 @@ export default function InferStep3() {
             {liveBlocker}
           </div>
         )}
+        {phaseLabel && !err && (
+          <div style={{
+            marginTop: 12, padding: "10px 14px", borderRadius: 8,
+            background: T.surfaceWarm,
+            fontFamily: FONT_MONO, fontSize: 12, color: T.text2,
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: 4, background: T.primary,
+              animation: "cp-pulse 1.6s ease-in-out infinite",
+            }}/>
+            {phaseLabel}
+          </div>
+        )}
         {err && (
           <div style={{
             marginTop: 16, padding: "10px 14px", borderRadius: 8,
             background: T.redLight, fontFamily: FONT_BODY, fontSize: 13, color: T.red,
+            wordBreak: "break-word",
           }}>
             {err}
           </div>

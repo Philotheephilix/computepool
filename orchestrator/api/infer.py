@@ -115,6 +115,54 @@ def build_router(
             "X-PAYMENT-RESPONSE": build_payment_response_header(settle),
         })
 
+    @router.post("/pools/{name}/infer/verify")
+    async def infer_verify(
+        name: str,
+        request: Request,
+        user: dict = Depends(get_current_user),
+        x_payment: str | None = Header(default=None, alias="X-PAYMENT"),
+    ):
+        """Verify-only path: same x402 prelude as /infer/stream, but returns
+        a JSON {isValid, invalidReason, payer, requirements} immediately
+        without starting inference, charging the user, or settling. Lets the
+        UI catch bad signatures / insufficient balance / wrong chain on the
+        review screen instead of after navigating to the active screen.
+        """
+        body = await request.json()
+        max_tokens = int(body.get("max_tokens", 64))
+        lp = load_pool if load_pool is not None else _load_pool
+        pool = await lp(name, user)
+        if pool is None or pool.get("state") not in ("ready", "loaded"):
+            raise HTTPException(409, "pool not ready")
+
+        requirements = build_payment_requirements(
+            resource=f"/pools/{name}/infer/stream",
+            max_amount_micro=max_tokens * settings.x402_default_price_per_token_usdc_micro,
+            description=f"compute-pool streaming inference on {pool.get('model_name','?')}",
+        )
+
+        if not x_payment:
+            return JSONResponse(status_code=200, content={
+                "isValid": False,
+                "invalidReason": "X-PAYMENT header is required",
+                "requirements": requirements,
+            })
+        try:
+            payment = parse_payment_header(x_payment)
+        except Exception as e:
+            return JSONResponse(status_code=200, content={
+                "isValid": False,
+                "invalidReason": f"unparseable X-PAYMENT: {e}",
+                "requirements": requirements,
+            })
+        verify = await verify_via_facilitator(payment, requirements, http=http)
+        return JSONResponse(status_code=200, content={
+            "isValid": bool(verify.get("isValid")),
+            "invalidReason": verify.get("invalidReason"),
+            "payer": verify.get("payer"),
+            "requirements": requirements,
+        })
+
     @router.post("/pools/{name}/infer/stream")
     async def infer_stream(
         name: str,
