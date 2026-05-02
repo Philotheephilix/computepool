@@ -7,6 +7,25 @@ import { pools as poolsApi, type Pool, type InferResponse, ApiError } from "@/li
 import { saveJob } from "@/lib/job-store";
 import { saveReputation } from "@/lib/reputation";
 import { loadAuth } from "@/lib/auth-store";
+import { PaymentRequiredDialog } from "@/components/PaymentRequiredDialog";
+
+interface PaymentRequirements {
+  scheme: "exact";
+  network: "sepolia";
+  maxAmountRequired: string;
+  resource: string;
+  description: string;
+  payTo: `0x${string}`;
+  asset: `0x${string}`;
+  extra?: { name: string; version: string };
+}
+
+function extract402Requirements(err: unknown): PaymentRequirements | null {
+  if (!(err instanceof ApiError) || err.status !== 402) return null;
+  const body = err.body as { accepts?: PaymentRequirements[] } | undefined;
+  const first = body?.accepts?.[0];
+  return first ?? null;
+}
 
 const USE_0G = process.env.NEXT_PUBLIC_USE_0G_COMPUTE === "1";
 
@@ -101,6 +120,7 @@ export function JobForm() {
   const [elapsed, setElapsed]           = useState(0);
   const [result, setResult]             = useState<InferResponse | null>(null);
   const [error, setError]               = useState<string | null>(null);
+  const [paymentReq, setPaymentReq]     = useState<PaymentRequirements | null>(null);
 
   useEffect(() => {
     const a = loadAuth();
@@ -117,8 +137,7 @@ export function JobForm() {
       .finally(() => setLoadingPools(false));
   }, [poolFromQuery]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function runInfer(extraHeaders: Record<string, string> = {}) {
     setError(null);
     setResult(null);
     setSubmitting(true);
@@ -130,7 +149,7 @@ export function JobForm() {
     try {
       const res = USE_0G
         ? await infer0g(prompt, maxTokens, temperature)
-        : await poolsApi.infer(poolName, prompt, maxTokens, temperature);
+        : await poolsApi.infer(poolName, prompt, maxTokens, temperature, extraHeaders);
 
       const activationHash = await computeActivationHash(res.text, res.timings);
       const source: "orchestrator" | "0g-compute" = USE_0G ? "0g-compute" : "orchestrator";
@@ -146,11 +165,21 @@ export function JobForm() {
 
       setResult(res);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Request failed.");
+      const reqs = extract402Requirements(e);
+      if (reqs) {
+        setPaymentReq(reqs);
+      } else {
+        setError(e instanceof ApiError ? e.message : "Request failed.");
+      }
     } finally {
       clearInterval(ticker);
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await runInfer();
   }
 
   if (authed === false) {
@@ -185,6 +214,7 @@ export function JobForm() {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {USE_0G && (
         <div className="px-3 py-2 rounded border border-[#b39dff44] bg-[#b39dff0d] font-mono text-[10px] text-[#b39dff] uppercase tracking-[0.08em]">
@@ -270,5 +300,16 @@ export function JobForm() {
 
       {result && <InferResult result={result} />}
     </form>
+    {paymentReq && (
+      <PaymentRequiredDialog
+        requirements={paymentReq}
+        onSigned={(hdr) => {
+          setPaymentReq(null);
+          void runInfer({ "X-PAYMENT": hdr });
+        }}
+        onCancel={() => setPaymentReq(null)}
+      />
+    )}
+    </>
   );
 }

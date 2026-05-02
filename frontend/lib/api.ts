@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public body?: unknown) {
     super(message);
     this.name = "ApiError";
   }
@@ -28,12 +28,14 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, opts);
   if (!res.ok) {
     let msg = res.statusText;
+    let parsed: unknown = undefined;
     try {
       const body = await res.json();
+      parsed = body;
       const d = body.detail ?? body.error ?? body;
       msg = typeof d === "string" ? d : JSON.stringify(d);
     } catch { /* ignore parse error */ }
-    throw new ApiError(res.status, msg);
+    throw new ApiError(res.status, msg, parsed);
   }
   return res.json() as Promise<T>;
 }
@@ -149,10 +151,16 @@ export const pools = {
     req<unknown>(`/pools/${name}/load`, { method: "POST", headers: h() }),
   unload: (name: string) =>
     req<unknown>(`/pools/${name}/unload`, { method: "POST", headers: h() }),
-  infer: (name: string, prompt: string, maxTokens: number, temperature: number) =>
+  infer: (
+    name: string,
+    prompt: string,
+    maxTokens: number,
+    temperature: number,
+    extraHeaders: Record<string, string> = {},
+  ) =>
     req<InferResponse>(`/pools/${name}/infer`, {
       method: "POST",
-      headers: h(),
+      headers: { ...(h() as Record<string, string>), ...extraHeaders },
       body: JSON.stringify({ prompt, max_tokens: maxTokens, temperature }),
     }),
 };
