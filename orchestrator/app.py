@@ -204,8 +204,8 @@ async def lifespan(app: FastAPI):
                 economics=app.state.economics,
                 run_inference=run_inference,
                 load_pool=_load_pool_for_infer,
+                http=app.state.http,
             ),
-            dependencies=[Depends(get_current_user)],
         )
     except Exception:
         logger.exception("failed to initialize EconomicsService; continuing without it")
@@ -693,15 +693,16 @@ async def pools_unload(name: str, user: dict = Depends(get_current_user)):
     return {"ok": True, "pool": pool_to_response(pool), "acks": acks}
 
 
-async def _load_pool_for_infer(name: str) -> dict | None:
-    """Lookup helper for the 402-aware infer router.
+async def _load_pool_for_infer(name: str, user: dict) -> dict | None:
+    """Owner-scoped lookup for the 402-aware infer router.
 
-    The router's ``build_router`` doesn't pass the request user, so this
-    finds a pool by name alone and synthesises a ``state`` field from the
-    existing booleans (``initialized`` + ``loaded``) so the new router's
-    ``state in {"ready", "loaded"}`` check works against legacy pool docs.
+    Synthesises a ``state`` field from the existing ``initialized`` /
+    ``loaded`` booleans so the router's ``state in {"ready","loaded"}``
+    check works against legacy pool docs.
     """
-    pool = await db.pools().find_one({"name": name})
+    pool = await db.pools().find_one(
+        {"owner_username": user["username"], "name": name},
+    )
     if pool is None:
         return None
     if pool.get("loaded") and pool.get("initialized"):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -11,7 +12,7 @@ from web3 import Web3
 
 from .chain import Chain
 from .keeperhub import KeeperHubClient, WorkflowInputs
-from .models import CoalitionState
+from .models import CoalitionState, PaymentPoolState, PaymentState
 from .settings import Settings
 
 
@@ -120,12 +121,12 @@ class EconomicsService:
             },
         )
         coalition = await self.db.coalitions.find_one({"_id": coalition_id})
+        participants = coalition["participants"]
         nodes = await self.db.nodes.find(
-            {"wallet_address": {"$in": coalition["participants"]}}
-        ).to_list(length=None)
+            {"wallet_address": {"$in": participants}}
+        ).to_list(length=len(participants))
 
-        sig_txs: dict[str, str] = {}
-        for node in nodes:
+        async def _sign_one(node: dict) -> tuple[str, str]:
             url = f"{node['worker_url'].rstrip('/')}/coalition/sign-onchain"
             r = await self.http.post(
                 url,
@@ -135,10 +136,24 @@ class EconomicsService:
                     "stake_token": self.settings.usdc_address,
                     "stake_amount": str(coalition.get("stake_per_party", "0")),
                 },
-                timeout=120.0,  # tx + receipt can take ~30s
+                timeout=120.0,
             )
             r.raise_for_status()
-            sig_txs[node["wallet_address"]] = r.json()["tx_hash"]
+            return node["wallet_address"], r.json()["tx_hash"]
+
+        results = await asyncio.gather(
+            *(_sign_one(n) for n in nodes), return_exceptions=True,
+        )
+        sig_txs: dict[str, str] = {}
+        for node, res in zip(nodes, results):
+            if isinstance(res, Exception):
+                logger.error(
+                    "worker sign-onchain failed node=%s err=%s",
+                    node.get("node_id"), res,
+                )
+                continue
+            addr, tx = res
+            sig_txs[addr] = tx
 
         await self.db.coalitions.update_one(
             {"_id": coalition_id}, {"$set": {"sign_txs": sig_txs}}
@@ -173,32 +188,38 @@ class EconomicsService:
                     "super_token": payload.get(
                         "super_token", self.settings.usdcx_address
                     ),
-                    "state": "ready",
+                    "state": PaymentPoolState.READY.value,
                 }
             },
             upsert=True,
         )
 
+        participants = coalition["participants"]
         nodes = await self.db.nodes.find(
-            {"wallet_address": {"$in": coalition["participants"]}}
-        ).to_list(length=None)
-        for node in nodes:
+            {"wallet_address": {"$in": participants}}
+        ).to_list(length=len(participants))
+
+        async def _connect_one(node: dict) -> str:
             url = f"{node['worker_url'].rstrip('/')}/coalition/connect-pool"
-            try:
-                r = await self.http.post(
-                    url, json={"pool_address": pool_address}, timeout=30.0
-                )
-                r.raise_for_status()
-                logger.info(
-                    "worker connect-pool ok node=%s tx=%s",
-                    node["node_id"],
-                    r.json().get("tx_hash"),
-                )
-            except Exception as e:
+            r = await self.http.post(
+                url, json={"pool_address": pool_address}, timeout=30.0,
+            )
+            r.raise_for_status()
+            return r.json().get("tx_hash", "")
+
+        results = await asyncio.gather(
+            *(_connect_one(n) for n in nodes), return_exceptions=True,
+        )
+        for node, res in zip(nodes, results):
+            if isinstance(res, Exception):
                 logger.error(
                     "worker connect-pool failed node=%s err=%s",
-                    node["node_id"],
-                    e,
+                    node.get("node_id"), res,
+                )
+            else:
+                logger.info(
+                    "worker connect-pool ok node=%s tx=%s",
+                    node.get("node_id"), res,
                 )
 
     async def on_breach_detected(
@@ -227,10 +248,21 @@ class EconomicsService:
         estimated_duration_s: float,
         inference_request_id: str,
     ) -> None:
-        """Persist a Payment and trigger the stream-start workflow."""
-        flow_rate = max(
-            amount_usdcx_wei // max(1, int(estimated_duration_s)), 10**9
-        )
+        """Persist a Payment and trigger the stream-start workflow.
+
+        If the requested rate would round below the floor, scale BOTH the rate
+        and the budget so the on-chain stream stays consistent (rate * duration
+        ~= budget). Without this the floored rate would drain the budget early.
+        """
+        duration = max(1, int(estimated_duration_s))
+        rate_floor = 10**9
+        raw_rate = amount_usdcx_wei // duration
+        if raw_rate < rate_floor:
+            flow_rate = rate_floor
+            amount_usdcx_wei = flow_rate * duration
+        else:
+            flow_rate = raw_rate
+
         pp = await self.db.payment_pools.find_one({"pool_id": pool_id})
         if not pp:
             raise RuntimeError(f"no payment pool for pool_id={pool_id}")
@@ -245,7 +277,7 @@ class EconomicsService:
                 "flow_rate_wei_per_sec": str(flow_rate),
                 "estimated_duration_s": estimated_duration_s,
                 "inference_request_id": inference_request_id,
-                "state": "verified",
+                "state": PaymentState.VERIFIED.value,
                 "created_at": datetime.now(timezone.utc),
             }
         )
@@ -268,7 +300,7 @@ class EconomicsService:
             {"_id": payload["session_id"]},
             {
                 "$set": {
-                    "state": "streaming",
+                    "state": PaymentState.STREAMING.value,
                     "stream_open_tx": payload.get("tx_hash"),
                 }
             },
@@ -297,7 +329,7 @@ class EconomicsService:
             {"_id": payload["session_id"]},
             {
                 "$set": {
-                    "state": "stopped",
+                    "state": PaymentState.STOPPED.value,
                     "stream_close_tx": payload.get("tx_hash"),
                 }
             },
@@ -309,11 +341,12 @@ class EconomicsService:
         inference_request_id: str,
         settle_tx: str | None,
     ) -> None:
+        state = PaymentState.SETTLED if settle_tx else PaymentState.ORPHANED
         await self.db.payments.update_one(
             {"_id": inference_request_id},
             {
                 "$set": {
-                    "state": "settled" if settle_tx else "orphaned",
+                    "state": state.value,
                     "settle_tx": settle_tx,
                 }
             },

@@ -26,28 +26,36 @@ def parse_payment_header(header: str) -> dict:
     return json.loads(raw)
 
 
-async def verify_via_facilitator(payment: dict, requirements: dict) -> dict:
-    s = get_settings()
-    async with httpx.AsyncClient(timeout=15.0) as c:
-        r = await c.post(s.x402_facilitator_url.rstrip("/") + "/verify", json={
-            "x402Version": 1,
-            "paymentPayload": payment,
-            "paymentRequirements": requirements,
-        })
-        r.raise_for_status()
-        return r.json()
+async def _post(http: httpx.AsyncClient | None, url: str, body: dict, timeout: float) -> dict:
+    if http is not None:
+        r = await http.post(url, json=body, timeout=timeout)
+    else:
+        async with httpx.AsyncClient(timeout=timeout) as c:
+            r = await c.post(url, json=body, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
 
 
-async def settle_via_facilitator(payment: dict, requirements: dict) -> dict:
+async def verify_via_facilitator(payment: dict, requirements: dict,
+                                 *, http: httpx.AsyncClient | None = None) -> dict:
     s = get_settings()
-    async with httpx.AsyncClient(timeout=60.0) as c:
-        r = await c.post(s.x402_facilitator_url.rstrip("/") + "/settle", json={
-            "x402Version": 1,
-            "paymentPayload": payment,
-            "paymentRequirements": requirements,
-        })
-        r.raise_for_status()
-        return r.json()
+    return await _post(
+        http,
+        s.x402_facilitator_url.rstrip("/") + "/verify",
+        {"x402Version": 1, "paymentPayload": payment, "paymentRequirements": requirements},
+        timeout=15.0,
+    )
+
+
+async def settle_via_facilitator(payment: dict, requirements: dict,
+                                 *, http: httpx.AsyncClient | None = None) -> dict:
+    s = get_settings()
+    return await _post(
+        http,
+        s.x402_facilitator_url.rstrip("/") + "/settle",
+        {"x402Version": 1, "paymentPayload": payment, "paymentRequirements": requirements},
+        timeout=60.0,
+    )
 
 
 def build_payment_response_header(settle_result: dict) -> str:

@@ -8,8 +8,11 @@ from unittest.mock import ANY, AsyncMock, patch
 
 def _build_app(economics, run_inference):
     from orchestrator.api.infer import build_router
+    from orchestrator.auth import get_current_user
+
     app = FastAPI()
     app.include_router(build_router(economics=economics, run_inference=run_inference))
+    app.dependency_overrides[get_current_user] = lambda: {"username": "test"}
     return app
 
 
