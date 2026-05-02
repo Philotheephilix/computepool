@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { readSuperTokenBalance } from "@/lib/sepolia-rpc";
 
 interface Member {
-  label: string;          // "node-a"
+  label: string;
   address: `0x${string}`;
 }
 
@@ -14,23 +14,38 @@ interface Props {
   pollMs?: number;
 }
 
+function balancesEqual(a: Record<string, bigint>, b: Record<string, bigint>): boolean {
+  const ak = Object.keys(a);
+  const bk = Object.keys(b);
+  if (ak.length !== bk.length) return false;
+  for (const k of ak) if (a[k] !== b[k]) return false;
+  return true;
+}
+
 export function WalletBalances({ superToken, members, pollMs = 1000 }: Props) {
   const [balances, setBalances] = useState<Record<string, bigint>>({});
+  const balancesRef = useRef(balances);
+  balancesRef.current = balances;
+
+  const memberKey = members.map((m) => m.address).join(",");
 
   useEffect(() => {
     let stop = false;
     async function tick() {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      const previous = balancesRef.current;
       const next: Record<string, bigint> = {};
       await Promise.all(
         members.map(async (m) => {
           try {
             next[m.address] = await readSuperTokenBalance(superToken, m.address);
           } catch {
-            next[m.address] = balances[m.address] ?? 0n;
+            next[m.address] = previous[m.address] ?? 0n;
           }
-        })
+        }),
       );
-      if (!stop) setBalances(next);
+      if (stop) return;
+      setBalances((prev) => (balancesEqual(prev, next) ? prev : next));
     }
     const t = setInterval(tick, pollMs);
     tick();
@@ -38,7 +53,9 @@ export function WalletBalances({ superToken, members, pollMs = 1000 }: Props) {
       stop = true;
       clearInterval(t);
     };
-  }, [superToken, members, pollMs]);
+    // memberKey is a stable string identity for the address list; using it as a dep
+    // avoids tearing down the interval when the parent re-creates the array literal.
+  }, [superToken, memberKey, pollMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
