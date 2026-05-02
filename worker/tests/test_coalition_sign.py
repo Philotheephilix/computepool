@@ -76,3 +76,28 @@ def test_sign_onchain_rejects_bad_stake_token(_worker_env):
         },
     )
     assert r.status_code == 400
+
+
+def test_connect_pool_submits_tx(_worker_env):
+    app = make_app()
+    client = TestClient(app)
+    with patch(
+        "worker.coalition_sign._submit_connect_pool",
+        new=AsyncMock(return_value="0xfeed"),
+    ):
+        r = client.post(
+            "/coalition/connect-pool",
+            json={"pool_address": "0x" + "11" * 20},
+        )
+        assert r.status_code == 200
+        assert r.json()["tx_hash"] == "0xfeed"
+
+
+def test_connect_pool_rejects_bad_address(_worker_env):
+    app = make_app()
+    client = TestClient(app)
+    r = client.post(
+        "/coalition/connect-pool",
+        json={"pool_address": "not-hex"},
+    )
+    assert r.status_code == 400

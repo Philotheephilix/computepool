@@ -27,6 +27,15 @@ ERC20_APPROVE_ABI = json.loads("""[
 ]""")
 
 
+GDA_FORWARDER_ABI = json.loads("""[
+  {"name":"connectPool","type":"function","stateMutability":"nonpayable",
+   "inputs":[
+     {"name":"pool","type":"address"},
+     {"name":"userData","type":"bytes"}
+   ],"outputs":[{"type":"bool"}]}
+]""")
+
+
 class SignOnChainRequest(BaseModel):
     coalition_onchain_id: int
     coalition_address: str
@@ -115,6 +124,49 @@ async def _submit_sign_onchain(
     if receipt["status"] != 1:
         raise HTTPException(500, f"sign tx reverted: {tx_hash.hex()}")
     return tx_hash.hex(), acct.address
+
+
+class ConnectPoolRequest(BaseModel):
+    pool_address: str
+
+
+class ConnectPoolResponse(BaseModel):
+    tx_hash: str
+
+
+async def _submit_connect_pool(pool_address: str) -> str:
+    settings = get_settings()
+    w3 = AsyncWeb3(AsyncHTTPProvider(settings.sepolia_rpc_url))
+    acct = Account.from_key(settings.worker_private_key)
+    forwarder = w3.eth.contract(
+        address=AsyncWeb3.to_checksum_address(settings.gda_v1_forwarder),
+        abi=GDA_FORWARDER_ABI,
+    )
+    fn = forwarder.functions.connectPool(
+        AsyncWeb3.to_checksum_address(pool_address), b""
+    )
+    tx = await fn.build_transaction({
+        "from": acct.address,
+        "nonce": await w3.eth.get_transaction_count(acct.address),
+        "chainId": await w3.eth.chain_id,
+    })
+    try:
+        est = await w3.eth.estimate_gas(tx)
+        tx["gas"] = int(est * 1.2)
+    except Exception:
+        tx["gas"] = 200_000
+    signed = acct.sign_transaction(tx)
+    raw = getattr(signed, "raw_transaction", None) or getattr(signed, "rawTransaction", None)
+    tx_hash = await w3.eth.send_raw_transaction(raw)
+    return tx_hash.hex()
+
+
+@router.post("/coalition/connect-pool", response_model=ConnectPoolResponse)
+async def connect_pool(req: ConnectPoolRequest) -> ConnectPoolResponse:
+    if not _is_address(req.pool_address):
+        raise HTTPException(400, "pool_address must be 0x + 40 hex chars")
+    tx_hash = await _submit_connect_pool(req.pool_address)
+    return ConnectPoolResponse(tx_hash=tx_hash)
 
 
 @router.post("/coalition/sign-onchain", response_model=SignOnChainResponse)
