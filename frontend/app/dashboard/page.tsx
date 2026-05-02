@@ -21,20 +21,6 @@ export default function DashOverview() {
     return () => clearInterval(id);
   }, []);
 
-  if (!authed) {
-    return (
-      <Card padding={48} style={{ maxWidth: 560, margin: "120px auto", textAlign: "center" }}>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: T.text1 }}>
-          Connect to view your network
-        </div>
-        <p style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text2, margin: "12px 0 24px" }}>
-          You need an orchestrator API key to see live pools, nodes, and jobs.
-        </p>
-        <Button kind="primary" onClick={() => router.push("/connect")}>Sign in →</Button>
-      </Card>
-    );
-  }
-
   const pools = data?.pools ?? [];
   const nodes = data?.nodes ?? [];
   const models = data?.models ?? {};
@@ -63,6 +49,20 @@ export default function DashOverview() {
     }
     return evs.slice(0, 8);
   }, [jobs, pools]);
+
+  if (!authed) {
+    return (
+      <Card padding={48} style={{ maxWidth: 560, margin: "120px auto", textAlign: "center" }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: T.text1 }}>
+          Connect to view your network
+        </div>
+        <p style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text2, margin: "12px 0 24px" }}>
+          You need an orchestrator API key to see live pools, nodes, and jobs.
+        </p>
+        <Button kind="primary" onClick={() => router.push("/connect")}>Sign in →</Button>
+      </Card>
+    );
+  }
 
   return (
     <div>
