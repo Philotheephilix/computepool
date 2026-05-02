@@ -24,6 +24,109 @@ async def _load_pool(name: str, user: dict) -> dict | None:
     raise NotImplementedError("inject load_pool via build_router(load_pool=...)")
 
 
+async def _run_inference_stream(
+    pool: dict, body: dict, request_id: str
+) -> AsyncIterator[dict]:
+    """Default stream runner; production overrides via build_router(run_inference_stream=...)."""
+    raise NotImplementedError("inject run_inference_stream via build_router(run_inference_stream=...)")
+    # make mypy/type checkers treat this as an async generator
+    yield  # pragma: no cover
+
+
+async def stream_pool_inference(
+    *,
+    pool_name: str,
+    prompt: str,
+    max_tokens: int,
+    temperature: float = 0.7,
+    _pool: dict | None = None,
+    _run_stream: Callable[..., AsyncIterator[dict]] | None = None,
+) -> AsyncIterator[dict]:
+    """Core token-yielding async generator.
+
+    Yields ``{"token": str}`` for each token and ends with
+    ``{"done": True, "tokens_in": int, "tokens_out": int}``.
+
+    The private ``_pool`` and ``_run_stream`` parameters are used by the
+    route (which already has both objects) and by tests (which mock them).
+    When called standalone without those arguments the module-level
+    ``_load_pool`` / ``_run_inference_stream`` stubs are used — they raise
+    ``NotImplementedError`` unless patched.
+    """
+    if _pool is None:
+        # No user context available at this level; load_pool requires one.
+        # Callers that need auth must pass _pool directly.
+        _pool = await _load_pool(pool_name, {})
+
+    run_stream = _run_stream if _run_stream is not None else _run_inference_stream
+
+    body = {"prompt": prompt, "max_tokens": max_tokens, "temperature": temperature}
+    request_id = str(uuid.uuid4())
+
+    tokens_in = 0
+    tokens_out = 0
+
+    async for ev in run_stream(pool=_pool, body=body, request_id=request_id):
+        event_type = ev.get("event")
+        if event_type == "token":
+            token_text = ev.get("token", "")
+            tokens_out += 1
+            yield {"token": token_text}
+        elif event_type == "meta":
+            tokens_in = ev.get("tokens_in", tokens_in)
+        elif event_type == "done":
+            tokens_in = ev.get("tokens_in", tokens_in)
+            tokens_out = ev.get("tokens_out", tokens_out)
+
+    yield {"done": True, "tokens_in": tokens_in, "tokens_out": tokens_out}
+
+
+async def run_pool_inference(
+    *,
+    pool_name: str,
+    prompt: str,
+    max_tokens: int,
+    temperature: float = 0.7,
+    _pool: dict | None = None,
+    _run_stream: Callable[..., AsyncIterator[dict]] | None = None,
+) -> dict:
+    """Drain ``stream_pool_inference`` into a single result dict.
+
+    Returns::
+
+        {
+            "output": "<concatenated tokens>",
+            "tokens_in": int,
+            "tokens_out": int,
+            "hit_max": bool,
+        }
+    """
+    tokens: list[str] = []
+    tokens_in = 0
+    tokens_out = 0
+
+    async for ev in stream_pool_inference(
+        pool_name=pool_name,
+        prompt=prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        _pool=_pool,
+        _run_stream=_run_stream,
+    ):
+        if "token" in ev:
+            tokens.append(ev["token"])
+        elif ev.get("done"):
+            tokens_in = ev["tokens_in"]
+            tokens_out = ev["tokens_out"]
+
+    return {
+        "output": "".join(tokens),
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "hit_max": tokens_out >= max_tokens,
+    }
+
+
 def build_router(
     *,
     economics,
@@ -221,13 +324,21 @@ def build_router(
             inference_request_id=request_id,
         )
 
+        prompt = body.get("prompt", "")
+        temperature = float(body.get("temperature", 0.7))
+
         async def event_stream():
             saw_done = False
             try:
-                async for ev in run_inference_stream(
-                    pool=pool, body=body, request_id=request_id,
+                async for ev in stream_pool_inference(
+                    pool_name=name,
+                    prompt=prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    _pool=pool,
+                    _run_stream=run_inference_stream,
                 ):
-                    if ev.get("event") == "done":
+                    if ev.get("done"):
                         saw_done = True
                     yield f"data: {json.dumps(ev)}\n\n"
             except Exception as e:

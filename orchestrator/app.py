@@ -24,8 +24,10 @@ from .auth import (
     hash_password,
     verify_password,
 )
+from .api.attestation import build_router as build_attestation_router
 from .api.infer import build_router as build_infer_router
 from .chain import Chain
+from .tee.signer import TEESigner
 from .economics import EconomicsService
 from .keeperhub import KeeperHubClient
 from .settings import get_settings
@@ -181,6 +183,18 @@ async def lifespan(app: FastAPI):
     database = await db.init_db()
     await db.ensure_economic_indexes(database)
     app.state.http = httpx.AsyncClient(timeout=WORKER_TIMEOUT_DEFAULT)
+
+    # TEE signer: dev mode reads a 32-byte hex key from settings; prod reads from a mounted keyfile.
+    _tee_settings = get_settings()
+    if _tee_settings.tee_report_type == "dev-insecure":
+        _key_hex = (_tee_settings.inft_oracle_private_key or ("0x" + "11" * 32)).removeprefix("0x")
+        _tee_signer = TEESigner.dev_from_key(bytes.fromhex(_key_hex))
+    else:
+        if not _tee_settings.tee_signer_key_path:
+            raise RuntimeError("tee_signer_key_path must be set when tee_report_type != dev-insecure")
+        _tee_signer = TEESigner.from_keyfile(_tee_settings.tee_signer_key_path)
+    app.state.tee_signer = _tee_signer
+    app.include_router(build_attestation_router(_tee_signer))
 
     # Economics wiring (KH client, on-chain reader, EconomicsService)
     try:

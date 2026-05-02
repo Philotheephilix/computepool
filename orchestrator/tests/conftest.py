@@ -3,6 +3,46 @@ import pytest
 import pytest_asyncio  # noqa: F401  (registers asyncio support)
 
 
+@pytest.fixture
+def mock_loaded_pool(_orchestrator_env):
+    """A minimal loaded-pool dict plus a mock run_inference_stream callable.
+
+    Returned dict has two keys:
+      - "name": str  — the pool name to pass to helpers
+      - "pool": dict — the raw pool document
+      - "run_stream": async callable — mock that yields token/done events
+
+    Usage in tests::
+
+        async for ev in stream_pool_inference(
+            pool_name=mock_loaded_pool["name"],
+            prompt="hi",
+            max_tokens=4,
+            _pool=mock_loaded_pool["pool"],
+            _run_stream=mock_loaded_pool["run_stream"],
+        )
+    """
+    pool_doc = {
+        "_id": "pool-test-1",
+        "name": "test-pool",
+        "model_name": "test-model",
+        "state": "loaded",
+    }
+
+    async def _fake_stream(pool, body, request_id):
+        max_tokens = body.get("max_tokens", 4)
+        count = min(max_tokens, 3)
+        for i in range(count):
+            yield {"event": "token", "token": f"tok{i}"}
+        yield {"event": "done", "tokens_in": 2, "tokens_out": count}
+
+    return {
+        "name": pool_doc["name"],
+        "pool": pool_doc,
+        "run_stream": _fake_stream,
+    }
+
+
 @pytest.fixture(autouse=True)
 def _orchestrator_env(monkeypatch):
     """Default minimum env so Settings() instantiates."""
