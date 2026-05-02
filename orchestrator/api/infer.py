@@ -18,6 +18,42 @@ from ..x402 import (
 
 logger = logging.getLogger("discom.infer")
 
+_inft_warn_once = False
+
+
+async def _check_inft_authorization(request: Request, pool: dict) -> None:
+    """Raise HTTPException(403) if the pool has an INFT and the caller wallet isn't authorized.
+
+    - Pools without ``inft_token_id`` (legacy / unmigrated) are passed through unchanged.
+    - If no ``inft_client`` is wired on ``app.state`` the gate is inactive and a one-time
+      warning is emitted; this keeps the route safe before Task A13 lands.
+    """
+    global _inft_warn_once
+    token_id = pool.get("inft_token_id")
+    if token_id is None:
+        return  # legacy pool, no INFT check
+
+    inft_client = getattr(request.app.state, "inft_client", None)
+    if inft_client is None:
+        if not _inft_warn_once:
+            logging.warning("INFT client not wired; INFT auth gate inactive (Task A13 will wire it)")
+            _inft_warn_once = True
+        return
+
+    caller_wallet = request.headers.get("X-Wallet-Address")
+    if not caller_wallet:
+        raise HTTPException(
+            status_code=403,
+            detail="caller not authorized on INFT (missing X-Wallet-Address header)",
+        )
+
+    authorized = await inft_client.is_authorized(token_id, caller_wallet)
+    if not authorized:
+        raise HTTPException(
+            status_code=403,
+            detail=f"caller wallet {caller_wallet!r} is not authorized on INFT token {token_id}",
+        )
+
 
 async def _load_pool(name: str, user: dict) -> dict | None:
     """Default loader; production overrides via build_router(load_pool=...)."""
@@ -152,6 +188,10 @@ def build_router(
         pool = await lp(name, user)
         if pool is None or pool.get("state") not in ("ready", "loaded"):
             raise HTTPException(409, "pool not ready")
+
+        # PoolINFT authorization gate (Task A14).
+        # Only active when pool has inft_token_id AND app.state.inft_client is wired.
+        await _check_inft_authorization(request, pool)
 
         requirements = build_payment_requirements(
             resource=f"/pools/{name}/infer",
