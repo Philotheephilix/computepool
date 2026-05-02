@@ -89,6 +89,7 @@ class EconomicsService:
             self.settings.kh_workflow_coalition_form,
             inputs=WorkflowInputs.coalition_form(
                 session_id=coalition_id,
+                coalition_address=self.settings.coalition_address,
                 participants=participants,
                 terms_hash=terms_hash,
                 deadline_unix=deadline_unix,
@@ -110,7 +111,22 @@ class EconomicsService:
         activate once all signatures land.
         """
         coalition_id = payload["session_id"]
-        onchain_id = int(payload["onchain_id"])
+        raw_onchain = (payload.get("onchain_id") or "").strip()
+        if raw_onchain and raw_onchain.lstrip("-").isdigit():
+            onchain_id = int(raw_onchain)
+        else:
+            tx_hash = payload.get("tx_hash")
+            if not tx_hash or not self.chain:
+                raise RuntimeError(
+                    f"on_coalition_proposed: cannot resolve onchain_id "
+                    f"(payload={payload!r})"
+                )
+            resolved = await self.chain.get_proposed_id_from_tx(tx_hash)
+            if resolved is None:
+                raise RuntimeError(
+                    f"on_coalition_proposed: no Proposed event in tx {tx_hash}"
+                )
+            onchain_id = resolved
         await self.db.coalitions.update_one(
             {"_id": coalition_id},
             {
@@ -343,8 +359,8 @@ class EconomicsService:
                 session_id=inference_request_id,
                 super_token=self.settings.usdcx_address,
                 pool_address=pp["superfluid_pool_address"],
+                sender=self.settings.orchestrator_wallet_address,
                 flow_rate_wei_per_sec=str(flow_rate),
-                total_budget_wei=str(amount_usdcx_wei),
                 callback_url=self.settings.public_url.rstrip("/")
                 + "/webhooks/keeperhub",
             ),
@@ -374,6 +390,7 @@ class EconomicsService:
                 session_id=inference_request_id,
                 super_token=self.settings.usdcx_address,
                 pool_address=pp["superfluid_pool_address"],
+                sender=self.settings.orchestrator_wallet_address,
                 callback_url=self.settings.public_url.rstrip("/")
                 + "/webhooks/keeperhub",
             ),

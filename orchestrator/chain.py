@@ -36,6 +36,17 @@ COALITION_ABI = json.loads("""[
      {"name":"signedCount","type":"uint8"},
      {"name":"breachedCount","type":"uint8"},
      {"name":"state","type":"uint8"}
+   ]},
+  {"name":"nextId","type":"function","stateMutability":"view","inputs":[],
+   "outputs":[{"type":"uint256"}]},
+  {"name":"Proposed","type":"event","anonymous":false,
+   "inputs":[
+     {"indexed":true,"name":"id","type":"uint256"},
+     {"indexed":false,"name":"termsHash","type":"bytes32"},
+     {"indexed":false,"name":"participants","type":"address[]"},
+     {"indexed":false,"name":"stakeToken","type":"address"},
+     {"indexed":false,"name":"stakePerParty","type":"uint256"},
+     {"indexed":false,"name":"deadline","type":"uint256"}
    ]}
 ]""")
 
@@ -69,6 +80,24 @@ class Chain:
     async def get_pool_total_units(self, pool: str) -> int:
         c = self.w3.eth.contract(address=AsyncWeb3.to_checksum_address(pool), abi=POOL_ABI)
         return await c.functions.getTotalUnits().call()
+
+    async def get_proposed_id_from_tx(self, tx_hash: str) -> int | None:
+        """Look up the on-chain coalition id from a Coalition.propose tx.
+
+        Reads the Proposed event from the receipt's logs. Returns None if no
+        Proposed log is found.
+        """
+        receipt = await self.w3.eth.get_transaction_receipt(tx_hash)
+        for log in receipt.get("logs", []):
+            try:
+                evt = self.coalition.events.Proposed().process_log(log)
+            except Exception:
+                continue
+            args = evt.get("args") or {}
+            cid = args.get("id")
+            if cid is not None:
+                return int(cid)
+        return None
 
     async def get_coalition_state(self, onchain_id: int) -> dict:
         out = await self.coalition.functions.coalitions(onchain_id).call()
