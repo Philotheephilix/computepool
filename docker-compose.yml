@@ -78,7 +78,7 @@ services:
     ports:
       - "4021:4021"
     networks:
-      - default
+      - discom
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4021/health').read()"]
       interval: 5s
