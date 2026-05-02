@@ -31,9 +31,11 @@ async def test_on_pool_initialize_persists_and_triggers_workflow(_orchestrator_e
     settings = get_settings()
     db = _FakeDB()
     kh = AsyncMock()
-    kh.execute_workflow = AsyncMock(return_value={"executionId": "exec_1"})
+    onchain = AsyncMock()
+    onchain.address = "0xorchestrator"
+    onchain.propose = AsyncMock(return_value={"tx_hash": "0xfeed", "onchain_id": 1})
     svc = EconomicsService(
-        db=db, kh=kh, chain=None, settings=settings, http=AsyncMock()
+        db=db, kh=kh, chain=None, settings=settings, http=AsyncMock(), onchain=onchain
     )
 
     pool = {
@@ -54,7 +56,10 @@ async def test_on_pool_initialize_persists_and_triggers_workflow(_orchestrator_e
     saved = db.coalitions.docs[0]
     assert saved["pool_id"] == "p1"
     assert saved["participants"] == ["0xa", "0xb"]
-    kh.execute_workflow.assert_awaited_once()
-    args, kwargs = kh.execute_workflow.call_args
-    assert args[0] == settings.kh_workflow_coalition_form
-    assert kwargs["inputs"]["session_id"] == cid
+    # Coalition.propose now goes onchain directly (KH path is gated off pending KH 0G fix)
+    onchain.propose.assert_awaited_once()
+    kwargs = onchain.propose.call_args.kwargs
+    assert kwargs["participants"] == ["0xa", "0xb"]
+    assert kwargs["stake_per_party"] == 1_000_000
+    assert kwargs["deadline_unix"] == 2_000_000_000
+    kh.execute_workflow.assert_not_awaited()

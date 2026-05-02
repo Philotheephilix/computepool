@@ -23,6 +23,15 @@ class _Coll:
         return None
 
 
+def _onchain_mock():
+    """Mock the OnchainSubmitter facade exposed by orchestrator.onchain."""
+    m = AsyncMock()
+    m.address = "0xorchestrator"
+    m.distribute_flow = AsyncMock(return_value={"tx_hash": "0xdeadbeef"})
+    m.propose = AsyncMock(return_value={"tx_hash": "0xfeed", "onchain_id": 1})
+    return m
+
+
 @pytest.mark.asyncio
 async def test_on_payment_received_starts_stream(_orchestrator_env):
     from orchestrator.settings import get_settings
@@ -40,9 +49,9 @@ async def test_on_payment_received_starts_stream(_orchestrator_env):
     )
     db.payments = _Coll()
     kh = AsyncMock()
-    kh.execute_workflow = AsyncMock(return_value={"executionId": "e"})
+    onchain = _onchain_mock()
     svc = EconomicsService(
-        db=db, kh=kh, chain=None, settings=settings, http=AsyncMock()
+        db=db, kh=kh, chain=None, settings=settings, http=AsyncMock(), onchain=onchain
     )
 
     await svc.on_payment_received(
@@ -53,11 +62,17 @@ async def test_on_payment_received_starts_stream(_orchestrator_env):
         estimated_duration_s=10.0,
         inference_request_id="req-1",
     )
+    # Payment recorded
     assert db.payments.inserted[0]["_id"] == "req-1"
-    kh.execute_workflow.assert_awaited_once()
-    args, kwargs = kh.execute_workflow.call_args
-    assert args[0] == settings.kh_workflow_stream_start
-    assert kwargs["inputs"]["pool_address"] == "0xpool"
+    # Stream-start path goes onchain (KH path is gated off pending KH 0G fix)
+    onchain.distribute_flow.assert_awaited_once()
+    kwargs = onchain.distribute_flow.call_args.kwargs
+    assert kwargs["pool"] == "0xpool"
+    assert kwargs["super_token"] == settings.usdcx_address
+    assert kwargs["sender"] == onchain.address
+    assert int(kwargs["flow_rate_wei_per_sec"]) > 0
+    # KH workflow is NOT invoked while the workaround is active
+    kh.execute_workflow.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -75,13 +90,17 @@ async def test_on_inference_complete_stops_stream(_orchestrator_env):
             }
         ]
     )
+    db.payments = _Coll()
     kh = AsyncMock()
-    kh.execute_workflow = AsyncMock(return_value={"executionId": "e"})
+    onchain = _onchain_mock()
     svc = EconomicsService(
-        db=db, kh=kh, chain=None, settings=settings, http=AsyncMock()
+        db=db, kh=kh, chain=None, settings=settings, http=AsyncMock(), onchain=onchain
     )
 
     await svc.on_inference_complete(pool_id="p1", inference_request_id="req-1")
-    args, kwargs = kh.execute_workflow.call_args
-    assert args[0] == settings.kh_workflow_stream_stop
-    assert kwargs["inputs"]["pool_address"] == "0xpool"
+    # Stream-stop = distributeFlow with rate 0
+    onchain.distribute_flow.assert_awaited_once()
+    kwargs = onchain.distribute_flow.call_args.kwargs
+    assert kwargs["pool"] == "0xpool"
+    assert int(kwargs["flow_rate_wei_per_sec"]) == 0
+    kh.execute_workflow.assert_not_awaited()

@@ -56,6 +56,8 @@ export type Pool = {
   assignments: { node_id: string; role: "entry" | "exit"; layers: [number, number] }[] | null;
   created_at: string | null;
   updated_at: string | null;
+  inft_token_id: number | null;
+  inft_metadata_uri: string | null;
 };
 
 export type Node = {

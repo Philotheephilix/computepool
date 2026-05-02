@@ -7,13 +7,14 @@ import { Logo } from "./logo";
 import { Badge, Button } from "./primitives";
 import { useWallet } from "@/lib/use-wallet";
 
-export function TopNav({ active }: { active: "landing" | "dashboard" | "infer" | "pitch" }) {
+export function TopNav({ active }: { active: "landing" | "dashboard" | "infer" | "pitch" | "wallet" }) {
   const T = useT();
   const { state: w, connect, busy } = useWallet();
   const items = [
     { id: "landing",   label: "Home",          path: "/" },
     { id: "dashboard", label: "Dashboard",     path: "/dashboard" },
     { id: "infer",     label: "Run inference", path: "/infer" },
+    { id: "wallet",    label: "Wallet",        path: "/wallet" },
     { id: "pitch",     label: "Pitch",         path: "/pitch" },
   ] as const;
 
