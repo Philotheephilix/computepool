@@ -15,20 +15,6 @@ chain = Chain(
 app = FastAPI(title="ComputePool x402 Facilitator")
 
 
-class Authorization(BaseModel):
-    from_: str
-    to: str
-    value: str
-    validAfter: str
-    validBefore: str
-    nonce: str
-
-    class Config:
-        populate_by_name = True
-        # Allow `from` instead of `from_` since `from` is reserved
-        fields = {"from_": "from"}
-
-
 class PaymentPayload(BaseModel):
     x402Version: int
     scheme: str
