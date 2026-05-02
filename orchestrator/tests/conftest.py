@@ -1,4 +1,6 @@
+import asyncio  # noqa: F401  (kept for explicit asyncio availability)
 import pytest
+import pytest_asyncio  # noqa: F401  (registers asyncio support)
 
 
 @pytest.fixture(autouse=True)
