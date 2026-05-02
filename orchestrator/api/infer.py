@@ -91,12 +91,18 @@ def build_router(*, economics, run_inference: Callable[..., Awaitable[dict]],
         settle = await settle_via_facilitator(payment, requirements)
         if not settle.get("success"):
             logger.error("x402 settle failed after inference req=%s settle=%s", request_id, settle)
+            await economics.mark_settled(
+                inference_request_id=request_id, settle_tx=None
+            )
             # Still return the result so the user keeps what they paid for
             return JSONResponse(status_code=200, content=result, headers={
                 "X-PAYMENT-RESPONSE": build_payment_response_header(settle),
                 "X-PAYMENT-ERROR": settle.get("errorReason", "settle failed"),
             })
 
+        await economics.mark_settled(
+            inference_request_id=request_id, settle_tx=settle.get("transaction")
+        )
         return JSONResponse(status_code=200, content=result, headers={
             "X-PAYMENT-RESPONSE": build_payment_response_header(settle),
         })

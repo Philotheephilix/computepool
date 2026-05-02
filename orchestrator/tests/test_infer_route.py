@@ -79,3 +79,33 @@ def test_infer_returns_402_on_invalid_payment(_orchestrator_env):
                         headers={"X-PAYMENT": header})
         assert r.status_code == 402
         assert "balance" in r.json()["error"]
+
+
+def test_infer_calls_mark_settled_on_success(_orchestrator_env):
+    economics = AsyncMock()
+    economics.on_payment_received = AsyncMock()
+    economics.on_inference_complete = AsyncMock()
+    economics.mark_settled = AsyncMock()
+    run_inference = AsyncMock(return_value={"output": "x"})
+    app = _build_app(economics, run_inference)
+    client = TestClient(app)
+
+    pool_doc = {"_id": "p1", "name": "demo", "model_name": "m", "state": "ready"}
+    payment = {"x402Version": 1, "scheme": "exact", "network": "sepolia",
+               "payload": {"signature": "0xsig", "authorization": {
+                   "from": "0xa", "to": "0xb", "value": "1000",
+                   "validAfter": "0", "validBefore": "9", "nonce": "0x" + "00"*32}}}
+    header = base64.b64encode(json.dumps(payment).encode()).decode()
+
+    with patch("orchestrator.api.infer._load_pool", AsyncMock(return_value=pool_doc)), \
+         patch("orchestrator.api.infer.verify_via_facilitator",
+               AsyncMock(return_value={"isValid": True, "payer": "0xa"})), \
+         patch("orchestrator.api.infer.settle_via_facilitator",
+               AsyncMock(return_value={"success": True, "transaction": "0xtx",
+                                        "network": "sepolia", "payer": "0xa"})):
+        r = client.post("/pools/demo/infer",
+                        json={"prompt": "hi", "max_tokens": 10},
+                        headers={"X-PAYMENT": header})
+        assert r.status_code == 200
+        economics.mark_settled.assert_awaited_with(
+            inference_request_id=ANY, settle_tx="0xtx")
