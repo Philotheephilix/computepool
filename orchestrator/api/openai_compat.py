@@ -3,6 +3,7 @@
 Only the schema lives here for now. Routes (`/v1/models`, `/v1/chat/completions`)
 land in subsequent tasks.
 """
+import uuid
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -54,15 +55,24 @@ class ChatCompletionsResponse(BaseModel):
 
 from time import time  # noqa: E402
 
-from fastapi import APIRouter, Depends  # noqa: E402
+from fastapi import APIRouter, Depends, HTTPException, Response  # noqa: E402
 
 from orchestrator.api.openai_auth import get_caller_wallet  # noqa: E402
 
 
-def build_router(*, db, inft_client: Optional[object] = None) -> APIRouter:
+def build_router(
+    *,
+    db,
+    inft_client: Optional[object] = None,
+    signer=None,
+    run_inference=None,
+) -> APIRouter:
     """Build the OpenAI-compatibility router. `db` is a Motor database; `inft_client` is
     an optional INFTClient — when None, INFT-guarded pools pass through unchecked
     (legacy behaviour preserved during the migration window).
+
+    `signer` is an optional TEESigner; `run_inference` is an optional async callable.
+    Both must be provided together to enable the /v1/chat/completions route.
     """
     r = APIRouter(prefix="/v1")
 
@@ -83,5 +93,60 @@ def build_router(*, db, inft_client: Optional[object] = None) -> APIRouter:
                 "owned_by": "computepool",
             })
         return {"object": "list", "data": out}
+
+    def _flatten_messages(messages):
+        return "\n".join(f"{m.role}: {m.content}" for m in messages)
+
+    @r.post("/chat/completions")
+    async def chat_completions(
+        req: ChatCompletionsRequest,
+        caller_wallet: str = Depends(get_caller_wallet),
+    ):
+        if signer is None or run_inference is None:
+            raise HTTPException(status_code=503, detail="chat completions not configured")
+        if req.stream:
+            # SSE branch lands in Task B6.
+            raise HTTPException(status_code=501, detail="streaming not implemented yet (B6)")
+
+        pool = await db.pools.find_one({"name": req.model, "state": "loaded"})
+        if pool is None:
+            pool = await db.pools.find_one({"model": req.model, "state": "loaded"})
+        if pool is None:
+            raise HTTPException(status_code=404, detail=f"no loaded pool for model={req.model}")
+
+        tid = pool.get("inft_token_id")
+        if tid is not None and inft_client is not None:
+            ok = await inft_client.is_authorized(token_id=tid, user=caller_wallet)
+            if not ok:
+                raise HTTPException(status_code=403, detail="caller not authorized on INFT")
+
+        result = await run_inference(
+            pool_name=pool["name"],
+            prompt=_flatten_messages(req.messages),
+            max_tokens=req.max_tokens,
+            temperature=req.temperature,
+        )
+
+        body = ChatCompletionsResponse(
+            id=f"chatcmpl-{uuid.uuid4().hex[:24]}",
+            created=int(time()),
+            model=req.model,
+            choices=[ChatCompletionsChoice(
+                message=ChatMessage(role="assistant", content=result["output"]),
+                finish_reason="length" if result.get("hit_max") else "stop",
+            )],
+            usage=ChatCompletionsUsage(
+                prompt_tokens=result["tokens_in"],
+                completion_tokens=result["tokens_out"],
+                total_tokens=result["tokens_in"] + result["tokens_out"],
+            ),
+        )
+        body_bytes = body.model_dump_json().encode()
+        sig = signer.sign(body_bytes)
+        headers = {
+            "X-Computepool-Signer": signer.address,
+            "X-Computepool-Signature": "0x" + sig.hex(),
+        }
+        return Response(content=body_bytes, media_type="application/json", headers=headers)
 
     return r
