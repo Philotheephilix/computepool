@@ -8,3 +8,11 @@ docs/superpowers/
 PRD-*.md
 *.plan.md
 *.spec.md
+*.pyc
+/.claude/worktrees
+
+# Local secrets — never commit
+.env
+.env.local
+*.env
+!.env.example
