@@ -50,8 +50,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 
 MODEL_LAYERS: dict[str, int] = {
+    # Open / no-gating models (workers can pull these without an HF token).
+    "Qwen/Qwen2.5-0.5B-Instruct": 24,
+    "Qwen/Qwen2.5-1.5B-Instruct": 28,
     "Qwen/Qwen2.5-3B-Instruct": 36,
     "Qwen/Qwen3-4B-Instruct-2507": 36,
+    # Gated repos — require HUGGING_FACE_HUB_TOKEN with granted access on the
+    # worker container; load() will 401 with GatedRepoError otherwise.
     "meta-llama/Llama-3.2-1B": 16,
     "meta-llama/Llama-3.2-3B": 28,
 }
