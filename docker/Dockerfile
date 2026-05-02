@@ -39,13 +39,18 @@ RUN chmod +x /usr/local/bin/node
 
 WORKDIR /app
 
-# PyTorch CUDA 12.1 wheels: ship their own libcudart, libcublas, etc. so the
-# host only needs an NVIDIA driver (no CUDA toolkit install needed).
-# Image grows by ~2.5GB but worker can hit the GPU without an nvidia base.
+# Torch variant is selectable: build-arg TORCH_VARIANT defaults to "cpu"
+# so plain `make build` produces a small CPU-only image. Pass cu121 / cu124 /
+# etc. for the matching CUDA wheel — those bundle libcudart + libcublas, so
+# the host just needs an NVIDIA driver, no CUDA toolkit base image required.
+ARG TORCH_VARIANT=cpu
+ARG TORCH_VERSION=2.5.1
+
 COPY worker/requirements.txt /app/worker/requirements.txt
 RUN pip install --no-cache-dir \
-        --extra-index-url https://download.pytorch.org/whl/cu121 \
-        -r /app/worker/requirements.txt
+        --extra-index-url "https://download.pytorch.org/whl/${TORCH_VARIANT}" \
+        "torch==${TORCH_VERSION}+${TORCH_VARIANT}" \
+ && pip install --no-cache-dir -r /app/worker/requirements.txt
 
 COPY orchestrator/requirements.txt /app/orchestrator/requirements.txt
 RUN pip install --no-cache-dir -r /app/orchestrator/requirements.txt

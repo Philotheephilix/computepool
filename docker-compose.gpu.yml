@@ -1,0 +1,41 @@
+# GPU override layer. Use with:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# Or via the Makefile shortcut:
+#
+#   make up-gpu
+#
+# Requires:
+#   * NVIDIA driver installed on the host (`nvidia-smi` works)
+#   * nvidia-container-toolkit installed and configured
+#       sudo pacman -Syu nvidia-container-toolkit  # or distro equivalent
+#       sudo nvidia-ctk runtime configure --runtime=docker --set-as-default
+#       sudo systemctl restart docker
+#   * Image built with the cu121 torch wheel: `make build-gpu`
+#
+# Without this override the workers run on CPU (auto-detected by
+# worker._select_device when TORCH_DEVICE is unset).
+
+services:
+  node-a:
+    environment:
+      TORCH_DEVICE: cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1                # share the single GPU between both nodes
+              capabilities: [gpu]
+
+  node-b:
+    environment:
+      TORCH_DEVICE: cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

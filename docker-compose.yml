@@ -70,13 +70,6 @@ services:
     networks:
       - discom
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1                # share the single GPU with node-b
-              capabilities: [gpu]
 
   node-b:
     image: dis-com:latest
@@ -107,13 +100,6 @@ services:
     networks:
       - discom
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 
   facilitator:
     build:
