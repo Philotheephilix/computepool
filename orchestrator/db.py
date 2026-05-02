@@ -49,6 +49,17 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     await db["pools"].create_index([("owner_username", 1), ("name", 1)], unique=True)
 
 
+async def ensure_economic_indexes(db: AsyncIOMotorDatabase) -> None:
+    """Idempotent: safe to call on every startup."""
+    await db["coalitions"].create_index([("pool_id", 1)])
+    await db["coalitions"].create_index([("onchain_id", 1)], sparse=True)
+    await db["payment_pools"].create_index([("pool_id", 1)], unique=True)
+    await db["payments"].create_index([("pool_id", 1), ("created_at", -1)])
+    await db["payments"].create_index(
+        [("inference_request_id", 1)], unique=True, sparse=True
+    )
+
+
 async def close_db() -> None:
     global _client, _db
     if _client is not None:

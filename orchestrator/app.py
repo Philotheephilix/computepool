@@ -165,7 +165,8 @@ async def healthcheck_loop(app: FastAPI) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await db.init_db()
+    database = await db.init_db()
+    await db.ensure_economic_indexes(database)
     app.state.http = httpx.AsyncClient(timeout=WORKER_TIMEOUT_DEFAULT)
     task = asyncio.create_task(healthcheck_loop(app), name="healthcheck-loop")
     try:
