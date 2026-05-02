@@ -2,3 +2,9 @@
 /worker/tests/__pycache__
 /orchestrator/__pycache__
 .venv/
+
+# Plans, specs, and PRDs — keep out of version control
+docs/superpowers/
+PRD-*.md
+*.plan.md
+*.spec.md
