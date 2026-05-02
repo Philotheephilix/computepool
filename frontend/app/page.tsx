@@ -43,7 +43,7 @@ export default function LandingPage() {
             href="/connect"
             className="px-5 py-2.5 bg-[var(--green)] text-black font-mono text-[11px] font-bold uppercase tracking-[0.08em] rounded hover:opacity-90 transition-opacity"
           >
-            Connect Wallet →
+            Get Started →
           </Link>
           <Link
             href="/jobs/demo"

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { AppPage } from "@/components/layout/AppPage";
 import { JobForm } from "@/components/jobs/JobForm";
@@ -22,7 +23,9 @@ export default function NewJobPage() {
         Run inference against a loaded pool
       </p>
 
-      <JobForm />
+      <Suspense fallback={<div className="h-10 rounded border border-[var(--border)] bg-[var(--bg-panel)] animate-pulse" />}>
+        <JobForm />
+      </Suspense>
     </AppPage>
   );
 }

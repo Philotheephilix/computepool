@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShardCard } from "./ShardCard";
 import { ShardDrawer } from "./ShardDrawer";
+import { useApiState } from "@/hooks/useApiState";
 import {
-  SHARD_LISTINGS,
-  sortShards,
+  nodeToCard,
+  sortCards,
   type LayerGroup,
-  type ShardListing,
+  type NodeCard,
   type SortKey,
 } from "@/lib/marketplace";
+import { getReputation, type RepSummary } from "@/lib/reputation";
 
 const LAYER_FILTERS: { label: string; value: LayerGroup | "all" }[] = [
   { label: "All",     value: "all"   },
@@ -20,28 +22,39 @@ const LAYER_FILTERS: { label: string; value: LayerGroup | "all" }[] = [
 ];
 
 const SORT_OPTIONS: { label: string; value: SortKey }[] = [
-  { label: "Reputation",  value: "rep-desc"  },
-  { label: "Bid: Low",    value: "bid-asc"   },
-  { label: "Bid: High",   value: "bid-desc"  },
-  { label: "Layer",       value: "layer-asc" },
+  { label: "Status",    value: "status"    },
+  { label: "Layer",     value: "layer-asc" },
+  { label: "Last Seen", value: "last-seen" },
 ];
 
+const EMPTY_REP: RepSummary = { winRate: 0, winHistory: [], slaPct: 0, count: 0 };
+
 export function MarketplaceClient() {
+  const { data, loading, error } = useApiState();
   const [layerFilter, setLayerFilter] = useState<LayerGroup | "all">("all");
-  const [sortKey, setSortKey]         = useState<SortKey>("rep-desc");
-  const [selected, setSelected]       = useState<ShardListing | null>(null);
+  const [sortKey, setSortKey]         = useState<SortKey>("status");
+  const [selected, setSelected]       = useState<NodeCard | null>(null);
   const [sortOpen, setSortOpen]       = useState(false);
+  const [repMap, setRepMap]           = useState<Map<string, RepSummary>>(new Map());
 
-  const visible = sortShards(
-    layerFilter === "all"
-      ? SHARD_LISTINGS
-      : SHARD_LISTINGS.filter((s) => s.layerGroup === layerFilter),
-    sortKey,
-  );
+  const allCards   = (data?.nodes ?? []).map(nodeToCard);
+  const loadedPools = (data?.pools ?? []).filter((p) => p.loaded).map((p) => p.name);
 
-  const available   = SHARD_LISTINGS.filter((s) => s.status === "available").length;
-  const inCoalition = SHARD_LISTINGS.filter((s) => s.status === "in-coalition").length;
-  const executing   = SHARD_LISTINGS.filter((s) => s.status === "executing").length;
+  useEffect(() => {
+    const cards = (data?.nodes ?? []).map(nodeToCard);
+    const map = new Map<string, RepSummary>();
+    for (const card of cards) {
+      map.set(card.node_id, getReputation(card.node_id));
+    }
+    setRepMap(map);
+  }, [data]);
+
+  const filtered = layerFilter === "all" ? allCards : allCards.filter((c) => c.layerGroup === layerFilter);
+  const visible  = sortCards(filtered, sortKey);
+
+  const available   = allCards.filter((c) => c.status === "available").length;
+  const inCoalition = allCards.filter((c) => c.status === "in-coalition").length;
+  const executing   = allCards.filter((c) => c.status === "executing").length;
 
   const currentSort = SORT_OPTIONS.find((o) => o.value === sortKey)!;
 
@@ -56,7 +69,11 @@ export function MarketplaceClient() {
             Marketplace
           </h1>
           <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
-            Browse GPU shard iNFTs available for coalition
+            {loading
+              ? "Loading nodes…"
+              : error === "unauthenticated"
+              ? "Sign in to see live nodes"
+              : `${allCards.length} nodes · onchain: 0G Galileo testnet`}
           </p>
         </div>
 
@@ -121,36 +138,60 @@ export function MarketplaceClient() {
         </div>
       </div>
 
-      {visible.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-40 rounded border border-[var(--border)] bg-[var(--bg-panel)] animate-pulse" />
+          ))}
+        </div>
+      ) : error && error !== "unauthenticated" ? (
+        <div className="p-5 rounded border border-[var(--border)] bg-[var(--bg-panel)] text-[13px] text-[var(--text-muted)]">
+          Error loading nodes: {error}
+        </div>
+      ) : visible.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <span className="font-mono text-[11px] text-[var(--text-faint)] uppercase tracking-[0.08em]">
-            No shards for this filter
+            {allCards.length === 0
+              ? error === "unauthenticated"
+                ? "Sign in to see registered nodes"
+                : "No nodes registered yet"
+              : "No nodes for this filter"}
           </span>
-          <button
-            onClick={() => setLayerFilter("all")}
-            className="text-[13px] text-[var(--green)] hover:underline"
-          >
-            Clear filter
-          </button>
+          {allCards.length > 0 && layerFilter !== "all" && (
+            <button
+              onClick={() => setLayerFilter("all")}
+              className="text-[13px] text-[var(--green)] hover:underline"
+            >
+              Clear filter
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {visible.map((shard) => (
+          {visible.map((card) => (
             <ShardCard
-              key={shard.id}
-              shard={shard}
-              selected={selected?.id === shard.id}
-              onClick={() =>
-                setSelected((prev) => (prev?.id === shard.id ? null : shard))
-              }
+              key={card.id}
+              card={card}
+              rep={repMap.get(card.node_id) ?? EMPTY_REP}
+              selected={selected?.id === card.id}
+              onClick={() => setSelected((prev) => (prev?.id === card.id ? null : card))}
             />
           ))}
         </div>
       )}
 
       {selected && (
-        <ShardDrawer shard={selected} onClose={() => setSelected(null)} />
+        <ShardDrawer
+          card={selected}
+          rep={repMap.get(selected.node_id) ?? EMPTY_REP}
+          loadedPools={loadedPools}
+          onClose={() => setSelected(null)}
+        />
       )}
+
+      <p className="mt-6 font-mono text-[10px] text-[var(--text-faint)]">
+        Live data: orchestrator · 0G Galileo · 0G Storage
+      </p>
     </>
   );
 }

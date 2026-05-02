@@ -1,10 +1,14 @@
 import type { InferResponse } from "@/lib/api";
 
-export type StoredJob = InferResponse & { created_at: string };
+export type StoredJob = InferResponse & {
+  created_at: string;
+  activationHash?: string;
+  source?: "orchestrator" | "0g-compute";
+};
 
 const KEY = "cp_jobs";
 
-export function saveJob(job: InferResponse): void {
+export function saveJob(job: Omit<StoredJob, "created_at">): void {
   if (typeof window === "undefined") return;
   const all = loadJobs();
   const stored: StoredJob = { ...job, created_at: new Date().toISOString() };

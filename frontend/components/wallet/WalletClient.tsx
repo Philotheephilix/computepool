@@ -7,6 +7,7 @@ import { injected } from "wagmi";
 import { formatUnits } from "viem";
 import { isGalileoChain } from "@/lib/wagmi";
 import { loadJobs, totalSpendUsdc, type StoredJob } from "@/lib/job-store";
+import { getReputation, type RepSummary } from "@/lib/reputation";
 
 function SimPill() {
   return (
@@ -56,12 +57,18 @@ export function WalletClient() {
     query: { enabled: isGalileoChain(chain?.id) },
   });
 
-  const [jobs, setJobs] = useState<StoredJob[]>([]);
+  const [jobs, setJobs]   = useState<StoredJob[]>([]);
   const [spend, setSpend] = useState(0);
+  const [nftReps, setNftReps] = useState<Map<string, RepSummary>>(new Map());
 
   useEffect(() => {
     setJobs(loadJobs().slice(0, 5));
     setSpend(totalSpendUsdc());
+    const map = new Map<string, RepSummary>();
+    for (const nft of FAKE_NFTS) {
+      map.set(nft.id, getReputation(nft.id));
+    }
+    setNftReps(map);
   }, []);
 
   const onWrongChain = isConnected && !isGalileoChain(chain?.id);
@@ -145,7 +152,10 @@ export function WalletClient() {
 
         <div className="flex flex-col gap-2">
           {FAKE_NFTS.map((nft) => {
-            const repColor = nft.rep >= 92 ? "var(--green)" : nft.rep >= 85 ? "var(--yellow)" : "var(--red)";
+            const rep = nftReps.get(nft.id);
+            const repColor = rep && rep.count > 0
+              ? rep.winRate >= 92 ? "var(--green)" : rep.winRate >= 75 ? "var(--yellow)" : "var(--red)"
+              : "var(--text-faint)";
             return (
               <div
                 key={nft.id}
@@ -158,15 +168,21 @@ export function WalletClient() {
                   <div className="text-[13px] text-[var(--text)] truncate">
                     {nft.model} · layers <span className="font-mono">{nft.layers}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <div className="flex-1 h-1 rounded-full bg-[var(--bg-elev)] max-w-[80px]">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${nft.rep}%`, backgroundColor: repColor }}
-                      />
+                  {rep && rep.count > 0 ? (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex-1 h-1 rounded-full bg-[var(--bg-elev)] max-w-[80px]">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${rep.winRate}%`, backgroundColor: repColor }}
+                        />
+                      </div>
+                      <span className="font-mono text-[10px] tabular-nums" style={{ color: repColor }}>
+                        rep {rep.winRate.toFixed(0)}%
+                      </span>
                     </div>
-                    <span className="font-mono text-[10px] tabular-nums" style={{ color: repColor }}>rep {nft.rep}%</span>
-                  </div>
+                  ) : (
+                    <div className="mt-1 font-mono text-[10px] text-[var(--text-faint)]">no rep data</div>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-mono text-[10px] text-[var(--text-faint)] uppercase tracking-[0.08em]">ERC-7857</div>
