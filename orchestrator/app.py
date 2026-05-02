@@ -29,6 +29,7 @@ from .auth import (
 )
 from .api.attestation import build_router as build_attestation_router
 from .api.infer import build_router as build_infer_router
+from .api.openai_compat import build_router as build_openai_compat_router
 from .chain import Chain
 from .tee.signer import TEESigner
 from .economics import EconomicsService
@@ -266,6 +267,50 @@ async def lifespan(app: FastAPI):
                 http=app.state.http,
             ),
         )
+
+        # OpenAI-compatible shim. Resolves a pool by name on each call, then delegates
+        # to the same `run_inference` / `run_inference_stream` adapters used by the
+        # native /pools/{name}/infer routes — so /v1/* sees the same worker pipeline.
+        async def _openai_run(*, pool_name, prompt, max_tokens, temperature=0.7, **_):
+            pool = await _load_pool_for_infer(pool_name)
+            if pool is None:
+                from fastapi import HTTPException
+                raise HTTPException(404, f"no loaded pool named {pool_name!r}")
+            data = await run_inference(pool=pool, body={
+                "prompt": prompt, "max_tokens": max_tokens, "temperature": temperature,
+            })
+            tokens_out = int(data.get("tokens") or 0)
+            return {
+                "output": data.get("text") or "",
+                "tokens_in": 0,                # orchestrator has no tokenizer; worker side could surface this later
+                "tokens_out": tokens_out,
+                "hit_max": tokens_out >= max_tokens,
+            }
+
+        async def _openai_stream(*, pool_name, prompt, max_tokens, temperature=0.7, **_):
+            pool = await _load_pool_for_infer(pool_name)
+            if pool is None:
+                from fastapi import HTTPException
+                raise HTTPException(404, f"no loaded pool named {pool_name!r}")
+            request_id = uuid.uuid4().hex
+            tokens_out = 0
+            async for ev in run_inference_stream(pool=pool, body={
+                "prompt": prompt, "max_tokens": max_tokens, "temperature": temperature,
+            }, request_id=request_id):
+                if ev.get("event") == "token" and "token" in ev:
+                    tokens_out += 1
+                    yield {"token": ev["token"]}
+                elif ev.get("event") == "done":
+                    yield {"done": True, "tokens_in": 0, "tokens_out": int(ev.get("tokens") or tokens_out)}
+
+        from .db import get_db as _get_db
+        app.include_router(build_openai_compat_router(
+            db=_get_db(),
+            inft_client=app.state.inft_client,
+            signer=app.state.tee_signer,
+            run_inference=_openai_run,
+            stream_inference=_openai_stream,
+        ))
     except Exception:
         logger.exception("failed to initialize EconomicsService; continuing without it")
         app.state.economics = None
