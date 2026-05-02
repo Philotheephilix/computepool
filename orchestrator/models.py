@@ -185,6 +185,8 @@ class Pool(BaseModel):
     assignments: Optional[list[Assignment]] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    inft_token_id: int | None = None
+    inft_metadata_uri: str | None = None
 
 
 class InferRequest(BaseModel):
@@ -238,6 +240,8 @@ def pool_to_response(doc: dict) -> dict:
         "assignments": doc.get("assignments"),
         "created_at": doc.get("created_at"),
         "updated_at": doc.get("updated_at"),
+        "inft_token_id": doc.get("inft_token_id"),
+        "inft_metadata_uri": doc.get("inft_metadata_uri"),
     }
 
 
