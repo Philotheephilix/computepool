@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, AsyncIterator, Dict
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -218,6 +220,7 @@ async def lifespan(app: FastAPI):
             build_infer_router(
                 economics=app.state.economics,
                 run_inference=run_inference,
+                run_inference_stream=run_inference_stream,
                 load_pool=_load_pool_for_infer,
                 http=app.state.http,
             ),
@@ -731,14 +734,8 @@ async def _load_pool_for_infer(name: str, user: dict) -> dict | None:
     return pool
 
 
-async def run_inference(pool: dict, body: dict) -> dict:
-    """Existing entry/AXL/generate flow lifted from the old infer route.
-
-    Logic unchanged: validates entry/exit assignments + node liveness, then
-    POSTs to the entry worker's ``/generate`` and returns a normalised dict.
-    """
-    name = pool.get("name")
-    owner = pool.get("owner_username")
+async def _resolve_infer_targets(pool: dict) -> tuple[dict, dict, dict]:
+    """Validate pool state + return (entry_node, exit_node, assn_pair)."""
     if not pool.get("initialized"):
         raise HTTPException(409, "pool is not initialized.")
     if not pool.get("loaded"):
@@ -749,6 +746,7 @@ async def run_inference(pool: dict, body: dict) -> dict:
     if entry_assn is None or exit_assn is None:
         raise HTTPException(503, "pool missing entry/exit assignment.")
 
+    owner = pool.get("owner_username")
     members = await db.nodes().find(
         {"owner_username": owner, "node_id": {"$in": [entry_assn["node_id"], exit_assn["node_id"]]}}
     ).to_list(length=2)
@@ -763,6 +761,14 @@ async def run_inference(pool: dict, body: dict) -> dict:
                 503,
                 f"{role} node {node['node_id']!r} status={node.get('status')}; load the pool first.",
             )
+    return entry_node, exit_node, {"entry": entry_assn, "exit": exit_assn}
+
+
+async def run_inference(pool: dict, body: dict) -> dict:
+    """Existing entry/AXL/generate flow. POSTs to the entry worker's
+    ``/generate`` and returns a normalised dict."""
+    entry_node, _exit_node, assn = await _resolve_infer_targets(pool)
+    name = pool.get("name")
 
     request_id = uuid.uuid4().hex
     payload = {
@@ -800,11 +806,63 @@ async def run_inference(pool: dict, body: dict) -> dict:
         "cost_usdc": tokens * price,
         "currency": "USDC",
         "pool": name,
-        "entry_node": entry_assn["node_id"],
-        "exit_node": exit_assn["node_id"],
+        "entry_node": assn["entry"]["node_id"],
+        "exit_node": assn["exit"]["node_id"],
         "request_id": request_id,
         "timings": data.get("timings"),
     }
+
+
+async def run_inference_stream(
+    pool: dict, body: dict, request_id: str
+) -> AsyncIterator[Dict[str, Any]]:
+    """Streaming variant of run_inference. Opens an SSE connection to the
+    entry worker's ``/generate/stream`` endpoint and yields one decoded event
+    per upstream frame. Injects ``cost_usdc`` / ``pool`` / ``entry_node`` /
+    ``exit_node`` into the final ``done`` event so callers don't have to
+    re-derive them."""
+    entry_node, _exit_node, assn = await _resolve_infer_targets(pool)
+    name = pool.get("name")
+    price = float(pool.get("price_per_token_usdc") or 0.0)
+
+    payload = {
+        "prompt": body.get("prompt"),
+        "max_tokens": int(body.get("max_tokens", 64)),
+        "temperature": float(body.get("temperature", 0.0)),
+        "request_id": request_id,
+    }
+    http: httpx.AsyncClient = app.state.http
+    url = entry_node["worker_url"].rstrip("/") + "/generate/stream"
+
+    async with http.stream(
+        "POST", url, json=payload, timeout=httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0),
+    ) as r:
+        if r.status_code >= 400:
+            body_bytes = await r.aread()
+            try:
+                detail = json.loads(body_bytes)
+            except Exception:
+                detail = {"error": body_bytes.decode("utf-8", errors="replace")}
+            raise HTTPException(
+                r.status_code,
+                detail={"node": entry_node["node_id"], "worker_response": detail},
+            )
+        async for line in r.aiter_lines():
+            if not line or not line.startswith("data:"):
+                continue
+            try:
+                ev = json.loads(line[5:].strip())
+            except Exception:
+                logger.warning("dropped malformed SSE line from worker: %r", line[:200])
+                continue
+            if ev.get("event") == "done":
+                tokens = int(ev.get("tokens") or 0)
+                ev["cost_usdc"] = tokens * price
+                ev["currency"] = "USDC"
+                ev["pool"] = name
+                ev["entry_node"] = assn["entry"]["node_id"]
+                ev["exit_node"] = assn["exit"]["node_id"]
+            yield ev
 
 
 @app.get("/api/state")

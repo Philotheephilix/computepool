@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import socket
@@ -12,6 +13,7 @@ import httpx
 import torch
 from eth_account import Account
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from .axl_client import AXLClient
@@ -20,6 +22,7 @@ from .model import SplitModel
 from .pipeline import (
     EntryDispatcher,
     entry_generate,
+    entry_generate_iter,
     entry_recv_loop,
     exit_loop,
 )
@@ -339,6 +342,54 @@ async def generate(req: GenerateRequest) -> dict:
         s.gen_in_flight = False
 
     return result
+
+
+@app.post("/generate/stream")
+async def generate_stream(req: GenerateRequest):
+    s = app.state
+    if s.model is None or not s.model.loaded:
+        raise HTTPException(status_code=400, detail="model not loaded")
+    if s.config is None or s.config.get("role") != "entry":
+        raise HTTPException(status_code=400, detail="generate is only valid on entry-role workers")
+    if s.dispatcher is None:
+        raise HTTPException(status_code=500, detail="entry dispatcher not initialised")
+    if s.gen_in_flight:
+        raise HTTPException(status_code=409, detail="another generation is already in flight")
+
+    request_id = req.request_id or str(uuid.uuid4())
+    exit_peer_id = s.config.get("peer_id", "")
+    if not exit_peer_id:
+        raise HTTPException(status_code=400, detail="exit peer_id not configured")
+
+    s.gen_in_flight = True
+
+    async def event_stream():
+        try:
+            async for ev in entry_generate_iter(
+                model=s.model,
+                axl=s.axl,
+                exit_peer_id=exit_peer_id,
+                dispatcher=s.dispatcher,
+                prompt=req.prompt,
+                max_tokens=int(req.max_tokens),
+                temperature=float(req.temperature),
+                request_id=request_id,
+            ):
+                yield f"data: {json.dumps(ev)}\n\n"
+        except Exception as e:
+            logger.exception("generate_stream failed req=%s", request_id)
+            yield f"data: {json.dumps({'event': 'error', 'request_id': request_id, 'error': repr(e)})}\n\n"
+        finally:
+            s.gen_in_flight = False
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # disable proxy buffering (nginx/CF)
+        },
+    )
 
 
 __all__ = ["app"]

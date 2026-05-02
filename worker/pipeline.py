@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any, Dict
+from typing import Any, AsyncIterator, Dict
 
 import torch
 from transformers.cache_utils import DynamicCache
@@ -123,7 +123,7 @@ def _hidden_msg(hidden: torch.Tensor, request_id: str, seq: int, temperature: fl
     )
 
 
-async def entry_generate(
+async def entry_generate_iter(
     model: SplitModel,
     axl: AXLClient,
     exit_peer_id: str,
@@ -133,7 +133,10 @@ async def entry_generate(
     temperature: float,
     request_id: str,
     recv_timeout: float = 120.0,
-) -> dict:
+) -> AsyncIterator[Dict[str, Any]]:
+    """Token-by-token generator. Yields one ``{"event":"token", ...}`` per
+    token as it arrives from the exit, then a single ``{"event":"done", ...}``
+    with the full text + summary timings."""
     if model.role != "entry":
         raise RuntimeError("entry_generate requires entry-role model")
     if not model.loaded:
@@ -168,6 +171,7 @@ async def entry_generate(
 
     queue = await dispatcher.register(request_id)
     generated_ids: list[int] = []
+    emitted_text = ""
     start = time.monotonic()
     past_kv = DynamicCache()
     seq_counter = 0
@@ -202,6 +206,20 @@ async def entry_generate(
 
             generated_ids.append(int(token_id))
 
+            # Incremental decode: BPE tokens may be sub-word, so decode the
+            # full sequence each step and emit the new suffix. Cheap relative
+            # to the model forward pass.
+            full_text = tokenizer.decode(generated_ids, skip_special_tokens=True)
+            delta = full_text[len(emitted_text):]
+            emitted_text = full_text
+            yield {
+                "event": "token",
+                "request_id": request_id,
+                "seq": step,
+                "token_id": int(token_id),
+                "delta": delta,
+            }
+
             if (eos_id is not None and token_id == eos_id) or step == max_tokens - 1:
                 break
 
@@ -228,7 +246,6 @@ async def entry_generate(
             logger.exception("entry: failed to send control end (continuing)")
 
         elapsed = time.monotonic() - start
-        text = tokenizer.decode(generated_ids, skip_special_tokens=True)
         n = len(generated_ids)
 
         avg = lambda xs: (sum(xs) / len(xs)) if xs else 0.0
@@ -243,9 +260,10 @@ async def entry_generate(
             "decode_steps": len(timings["decode_compute_s"]),
         }
         logger.info("entry: timings req=%s %s", request_id, timings_summary)
-        return {
+        yield {
+            "event": "done",
             "request_id": request_id,
-            "text": text,
+            "text": emitted_text,
             "tokens": n,
             "elapsed_s": elapsed,
             "tokens_per_sec": (n / elapsed) if elapsed > 0 else 0.0,
@@ -253,6 +271,36 @@ async def entry_generate(
         }
     finally:
         await dispatcher.unregister(request_id)
+
+
+async def entry_generate(
+    model: SplitModel,
+    axl: AXLClient,
+    exit_peer_id: str,
+    dispatcher: EntryDispatcher,
+    prompt: str,
+    max_tokens: int,
+    temperature: float,
+    request_id: str,
+    recv_timeout: float = 120.0,
+) -> dict:
+    last: Dict[str, Any] | None = None
+    async for ev in entry_generate_iter(
+        model=model,
+        axl=axl,
+        exit_peer_id=exit_peer_id,
+        dispatcher=dispatcher,
+        prompt=prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        request_id=request_id,
+        recv_timeout=recv_timeout,
+    ):
+        if ev["event"] == "done":
+            last = ev
+    if last is None:
+        raise RuntimeError("entry_generate produced no done event")
+    return {k: v for k, v in last.items() if k != "event"}
 
 
 class ExitState:
@@ -384,5 +432,6 @@ __all__ = [
     "EntryDispatcher",
     "entry_recv_loop",
     "entry_generate",
+    "entry_generate_iter",
     "exit_loop",
 ]
