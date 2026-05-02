@@ -27,6 +27,7 @@ def _orchestrator_env(monkeypatch):
         "GDA_V1_FORWARDER": "0x0000000000000000000000000000000000000000",
         "PUBLIC_URL": "http://localhost:8000",
         "X402_FACILITATOR_URL": "http://localhost:4021",
+        "ORCHESTRATOR_PRIVATE_KEY": "0x" + "a" * 64,
     }
     for k, v in defaults.items():
         monkeypatch.setenv(k, v)

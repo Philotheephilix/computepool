@@ -54,6 +54,21 @@ class Settings(BaseSettings):
     # Inference timing for flow-rate estimation
     seconds_per_token_estimate: float = 0.4
 
+    # 0G chain
+    zero_g_chain_rpc: str = "https://evmrpc-testnet.0g.ai"
+    zero_g_chain_id: int = 16602
+
+    # PoolINFT contract (deployed on 0G Galileo)
+    inft_contract_addr: str | None = None
+    inft_oracle_private_key: str | None = None  # dev-only; in prod the key lives in the TEE
+
+    # 0G Storage indexer
+    zero_g_storage_indexer_url: str = "https://indexer-storage-testnet-turbo.0g.ai"
+
+    # TEE signer
+    tee_signer_key_path: str | None = None      # e.g. /run/keys/tee_signer.key (mounted secret)
+    tee_report_type: str = "dev-insecure"       # dev-insecure | sgx-dcap | tdx
+
 
 @lru_cache
 def get_settings() -> Settings:
