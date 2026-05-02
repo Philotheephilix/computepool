@@ -22,6 +22,7 @@ from .auth import (
     hash_password,
     verify_password,
 )
+from .api.infer import build_router as build_infer_router
 from .chain import Chain
 from .economics import EconomicsService
 from .keeperhub import KeeperHubClient
@@ -29,7 +30,6 @@ from .settings import get_settings
 from .webhooks import build_router as build_webhooks_router
 from .models import (
     AuthResponse,
-    InferRequest,
     LoginRequest,
     MeResponse,
     NodeRegisterRequest,
@@ -199,6 +199,14 @@ async def lifespan(app: FastAPI):
             http=app.state.http,
         )
         app.include_router(build_webhooks_router(app.state.economics))
+        app.include_router(
+            build_infer_router(
+                economics=app.state.economics,
+                run_inference=run_inference,
+                load_pool=_load_pool_for_infer,
+            ),
+            dependencies=[Depends(get_current_user)],
+        )
     except Exception:
         logger.exception("failed to initialize EconomicsService; continuing without it")
         app.state.economics = None
@@ -685,13 +693,36 @@ async def pools_unload(name: str, user: dict = Depends(get_current_user)):
     return {"ok": True, "pool": pool_to_response(pool), "acks": acks}
 
 
-@app.post("/pools/{name}/infer")
-async def pools_infer(
-    name: str,
-    body: InferRequest,
-    user: dict = Depends(get_current_user),
-):
-    pool = await _owned_pool(name, user)
+async def _load_pool_for_infer(name: str) -> dict | None:
+    """Lookup helper for the 402-aware infer router.
+
+    The router's ``build_router`` doesn't pass the request user, so this
+    finds a pool by name alone and synthesises a ``state`` field from the
+    existing booleans (``initialized`` + ``loaded``) so the new router's
+    ``state in {"ready", "loaded"}`` check works against legacy pool docs.
+    """
+    pool = await db.pools().find_one({"name": name})
+    if pool is None:
+        return None
+    if pool.get("loaded") and pool.get("initialized"):
+        pool["state"] = "loaded"
+    elif pool.get("initialized"):
+        pool["state"] = "initialized"
+    else:
+        pool["state"] = "pending"
+    if pool.get("model") and not pool.get("model_name"):
+        pool["model_name"] = pool["model"]
+    return pool
+
+
+async def run_inference(pool: dict, body: dict) -> dict:
+    """Existing entry/AXL/generate flow lifted from the old infer route.
+
+    Logic unchanged: validates entry/exit assignments + node liveness, then
+    POSTs to the entry worker's ``/generate`` and returns a normalised dict.
+    """
+    name = pool.get("name")
+    owner = pool.get("owner_username")
     if not pool.get("initialized"):
         raise HTTPException(409, "pool is not initialized.")
     if not pool.get("loaded"):
@@ -703,7 +734,7 @@ async def pools_infer(
         raise HTTPException(503, "pool missing entry/exit assignment.")
 
     members = await db.nodes().find(
-        {"owner_username": user["username"], "node_id": {"$in": [entry_assn["node_id"], exit_assn["node_id"]]}}
+        {"owner_username": owner, "node_id": {"$in": [entry_assn["node_id"], exit_assn["node_id"]]}}
     ).to_list(length=2)
     by_nid = {m["node_id"]: m for m in members}
     entry_node = by_nid.get(entry_assn["node_id"])
@@ -719,9 +750,9 @@ async def pools_infer(
 
     request_id = uuid.uuid4().hex
     payload = {
-        "prompt": body.prompt,
-        "max_tokens": body.max_tokens,
-        "temperature": body.temperature,
+        "prompt": body.get("prompt"),
+        "max_tokens": int(body.get("max_tokens", 64)),
+        "temperature": float(body.get("temperature", 0.0)),
         "request_id": request_id,
     }
     http: httpx.AsyncClient = app.state.http
