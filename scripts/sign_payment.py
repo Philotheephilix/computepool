@@ -52,7 +52,8 @@ def main() -> int:
             ],
         },
         "domain": {
-            "name": "USD Coin", "version": "2",
+            "name": os.environ.get("USDC_DOMAIN_NAME", "USDC"),
+            "version": os.environ.get("USDC_DOMAIN_VERSION", "2"),
             "chainId": chain_id, "verifyingContract": usdc,
         },
         "primaryType": "TransferWithAuthorization",

@@ -17,7 +17,7 @@ def build_payment_requirements(*, resource: str, max_amount_micro: int,
         "payTo": s.orchestrator_wallet_address,
         "maxTimeoutSeconds": 60,
         "asset": s.usdc_address,
-        "extra": {"name": "USD Coin", "version": "2"},
+        "extra": {"name": "USDC", "version": "2"},
     }
 
 
