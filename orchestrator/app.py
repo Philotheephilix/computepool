@@ -189,14 +189,29 @@ async def lifespan(app: FastAPI):
             gda_forwarder=settings.gda_v1_forwarder,
             coalition_address=settings.coalition_address,
         )
+        # TODO(KH-issue): direct on-chain submitter that bypasses KH for the
+        # five write actions (Coalition.propose / activate, GDA createPool /
+        # updateMemberUnits / distributeFlow). KH's web3 write path hangs on
+        # 0G Galileo (Cloudflare 524 after 124s, no tx broadcast). Remove this
+        # and the `onchain=` wiring below once KH ships the 0G fix.
+        from .onchain import OnchainSubmitter
+        onchain = OnchainSubmitter(
+            rpc_url=settings.sepolia_rpc_url,
+            chain_id=settings.chain_id,
+            private_key=settings.orchestrator_private_key,
+            coalition_address=settings.coalition_address,
+            gda_forwarder=settings.gda_v1_forwarder,
+        )
         app.state.kh = kh
         app.state.chain = chain
+        app.state.onchain = onchain
         app.state.economics = EconomicsService(
             db=database,
             kh=kh,
             chain=chain,
             settings=settings,
             http=app.state.http,
+            onchain=onchain,
         )
         app.include_router(build_webhooks_router(app.state.economics))
         app.include_router(

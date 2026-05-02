@@ -23,15 +23,26 @@ class Settings(BaseSettings):
 
     # Chain
     sepolia_rpc_url: str
-    chain_id: int = 11155111
+    chain_id: int = 16602
     usdc_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
     usdcx_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
     coalition_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
-    cfa_v1_forwarder: str = "0xcfA132E353cB4E398080B9700609bb008eceB125"
-    gda_v1_forwarder: str = "0x6DA13Bde224A05a288748d857b9e7DDEffd1dE08"
+    # Forwarders are deployed alongside Superfluid framework on 0G (no canonical addresses).
+    cfa_v1_forwarder: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
+    gda_v1_forwarder: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
 
     # Orchestrator wallet (payee)
     orchestrator_wallet_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
+
+    # TODO(KH-issue): KeeperHub `web3/write-contract` and `execute_contract_call`
+    # both hang server-side on 0G Galileo (chainId 16602) — Cloudflare 524 after
+    # 124s, no on-chain tx ever submitted. Sepolia control flows succeed in
+    # ~10s. Until KH ships a fix for their 0G handler, the orchestrator submits
+    # the five write calls (Coalition.propose / activate, GDA createPool /
+    # updateMemberUnits / distributeFlow) directly via web3.py using this key.
+    # When KH is restored, swap back to `kh.execute_workflow(...)` calls in
+    # economics.py (look for the TODO(KH-issue) markers).
+    orchestrator_private_key: str = Field(..., pattern=r"^0x[0-9a-fA-F]{64}$")
 
     # x402
     x402_facilitator_url: str = "http://facilitator:4021"

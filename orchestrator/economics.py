@@ -13,6 +13,7 @@ from web3 import Web3
 from .chain import Chain
 from .keeperhub import KeeperHubClient, WorkflowInputs
 from .models import CoalitionState, PaymentPoolState, PaymentState
+from .onchain import OnchainSubmitter
 from .settings import Settings
 
 
@@ -27,12 +28,18 @@ class EconomicsService:
         chain: Chain | None,
         settings: Settings,
         http: httpx.AsyncClient,
+        onchain: OnchainSubmitter | None = None,
     ):
         self.db = db
         self.kh = kh
         self.chain = chain
         self.settings = settings
         self.http = http
+        # TODO(KH-issue): when KeeperHub fixes the 0G write handler this can
+        # become None again and the kh.execute_workflow(...) calls should be
+        # un-commented. See orchestrator/onchain.py and settings.py for the
+        # full failure-mode notes.
+        self.onchain = onchain
 
     @staticmethod
     def compute_terms_hash(pool_config: dict) -> str:
@@ -85,21 +92,47 @@ class EconomicsService:
             }
         )
 
-        await self.kh.execute_workflow(
-            self.settings.kh_workflow_coalition_form,
-            inputs=WorkflowInputs.coalition_form(
-                session_id=coalition_id,
-                coalition_address=self.settings.coalition_address,
-                participants=participants,
-                terms_hash=terms_hash,
-                deadline_unix=deadline_unix,
-                stake_token=self.settings.usdc_address,
-                stake_per_party=str(stake_amount_wei),
-                callback_url=self.settings.public_url.rstrip("/")
-                + "/webhooks/keeperhub",
-            ),
+        # TODO(KH-issue): KeeperHub's web3/write-contract action hangs on 0G
+        # Galileo (Cloudflare 524 after 124s, KH wallet nonce stays at 0).
+        # Bypassing KH and submitting Coalition.propose directly via web3.py.
+        # When KH ships the 0G fix, restore the kh.execute_workflow call below
+        # and delete the OnchainSubmitter call + the inline on_coalition_proposed
+        # invocation that synthesizes the webhook payload.
+        #
+        # await self.kh.execute_workflow(
+        #     self.settings.kh_workflow_coalition_form,
+        #     inputs=WorkflowInputs.coalition_form(
+        #         session_id=coalition_id,
+        #         coalition_address=self.settings.coalition_address,
+        #         participants=participants,
+        #         terms_hash=terms_hash,
+        #         deadline_unix=deadline_unix,
+        #         stake_token=self.settings.usdc_address,
+        #         stake_per_party=str(stake_amount_wei),
+        #         callback_url=self.settings.public_url.rstrip("/")
+        #         + "/webhooks/keeperhub",
+        #     ),
+        # )
+        if self.onchain is None:
+            raise RuntimeError("onchain submitter required while KH 0G writes are broken")
+        result = await self.onchain.propose(
+            participants=participants,
+            terms_hash=terms_hash,
+            deadline_unix=deadline_unix,
+            stake_token=self.settings.usdc_address,
+            stake_per_party=stake_amount_wei,
         )
-        logger.info("coalition.form workflow started session_id=%s", coalition_id)
+        logger.info(
+            "coalition.propose submitted directly session_id=%s tx=%s onchain_id=%s",
+            coalition_id, result["tx_hash"], result["onchain_id"],
+        )
+        # Synthesize the coalition_proposed webhook payload that KH would have
+        # POSTed back, then drive the rest of the pipeline inline.
+        asyncio.create_task(self.on_coalition_proposed({
+            "session_id": coalition_id,
+            "tx_hash": result["tx_hash"],
+            "onchain_id": str(result["onchain_id"]) if result["onchain_id"] is not None else "",
+        }))
         return coalition_id
 
     async def on_coalition_proposed(self, payload: dict) -> None:
@@ -190,23 +223,57 @@ class EconomicsService:
         units_b = str(units_by_addr.get(participants[1], 1)) if len(participants) > 1 else "0"
         participant_b = participants[1] if len(participants) > 1 else participants[0]
 
-        await self.kh.execute_workflow(
-            self.settings.kh_workflow_activate_and_pool,
-            inputs={
-                "session_id": coalition_id,
-                "coalition_address": self.settings.coalition_address,
-                "onchain_id": str(onchain_id),
-                "super_token": self.settings.usdcx_address,
-                "pool_admin": self.settings.orchestrator_wallet_address,
-                "participant_a": participants[0],
-                "units_a": units_a,
-                "participant_b": participant_b,
-                "units_b": units_b,
-                "callback_url": self.settings.public_url.rstrip("/")
-                + "/webhooks/keeperhub",
-            },
+        # TODO(KH-issue): KeeperHub web3 writes hang on 0G — see settings.py /
+        # onchain.py for full notes. Submitting activate + createPool +
+        # updateMemberUnits×2 directly. When KH is restored, un-comment the
+        # workflow trigger below and drop the OnchainSubmitter calls.
+        #
+        # await self.kh.execute_workflow(
+        #     self.settings.kh_workflow_activate_and_pool,
+        #     inputs={
+        #         "session_id": coalition_id,
+        #         "coalition_address": self.settings.coalition_address,
+        #         "onchain_id": str(onchain_id),
+        #         "super_token": self.settings.usdcx_address,
+        #         "pool_admin": self.settings.orchestrator_wallet_address,
+        #         "participant_a": participants[0],
+        #         "units_a": units_a,
+        #         "participant_b": participant_b,
+        #         "units_b": units_b,
+        #         "callback_url": self.settings.public_url.rstrip("/")
+        #         + "/webhooks/keeperhub",
+        #     },
+        # )
+        if self.onchain is None:
+            raise RuntimeError("onchain submitter required while KH 0G writes are broken")
+        activate_res = await self.onchain.activate(onchain_id=onchain_id)
+        pool_res = await self.onchain.create_pool(
+            super_token=self.settings.usdcx_address,
+            admin=self.onchain.address,
         )
-        logger.info("activate-and-pool workflow started session_id=%s", coalition_id)
+        units_a_res = await self.onchain.update_member_units(
+            pool=pool_res["pool_address"],
+            member=participants[0],
+            units=int(units_a),
+        )
+        units_b_res = await self.onchain.update_member_units(
+            pool=pool_res["pool_address"],
+            member=participant_b,
+            units=int(units_b),
+        )
+        logger.info(
+            "activate-and-pool submitted directly session_id=%s pool=%s",
+            coalition_id, pool_res["pool_address"],
+        )
+        asyncio.create_task(self.on_payment_pool_ready({
+            "session_id": coalition_id,
+            "pool_address": pool_res["pool_address"],
+            "super_token": self.settings.usdcx_address,
+            "activate_tx": activate_res["tx_hash"],
+            "create_pool_tx": pool_res["tx_hash"],
+            "units_a_tx": units_a_res["tx_hash"],
+            "units_b_tx": units_b_res["tx_hash"],
+        }))
 
     @staticmethod
     def _units_by_participant(pool: dict | None, participants: list[str]) -> dict[str, int]:
@@ -291,26 +358,31 @@ class EconomicsService:
         pool = await self.db.pools.find_one({"_id": coalition["pool_id"]})
         units_by_addr = self._units_by_participant(pool, coalition["participants"])
 
-        if not self.settings.kh_workflow_set_member_units:
-            logger.error("KH_WORKFLOW_SET_MEMBER_UNITS not configured")
-            return
-
-        for addr in coalition["participants"]:
-            await self.kh.execute_workflow(
-                self.settings.kh_workflow_set_member_units,
-                inputs={
-                    "session_id": coalition_id,
-                    "pool_address": pool_address,
-                    "member_address": addr,
-                    "units": str(units_by_addr.get(addr, 1)),
-                    "callback_url": self.settings.public_url.rstrip("/")
-                    + "/webhooks/keeperhub",
-                },
-            )
+        # TODO(KH-issue): the set-member-units workflow is no longer needed —
+        # member units are set inline by the direct on-chain submission in
+        # on_coalition_proposed (see the activate-and-pool block). Synthesize
+        # the per-member webhook events so on_member_units_set fires and
+        # connectPool fanout proceeds. When KH 0G writes are restored, fan
+        # out kh.execute_workflow(kh_workflow_set_member_units) here as before.
+        #
+        # if not self.settings.kh_workflow_set_member_units:
+        #     logger.error("KH_WORKFLOW_SET_MEMBER_UNITS not configured")
+        #     return
+        # for addr in coalition["participants"]:
+        #     await self.kh.execute_workflow(
+        #         self.settings.kh_workflow_set_member_units,
+        #         inputs={...},
+        #     )
         logger.info(
-            "set-member-units workflows triggered (%d) session_id=%s pool=%s",
-            len(coalition["participants"]), coalition_id, pool_address,
+            "set-member-units done inline (no KH) session_id=%s pool=%s",
+            coalition_id, pool_address,
         )
+        for addr in coalition["participants"]:
+            asyncio.create_task(self.on_member_units_set({
+                "session_id": coalition_id,
+                "member_address": addr,
+                "tx_hash": "",  # already submitted in activate-and-pool
+            }))
 
     async def on_member_units_set(self, payload: dict) -> None:
         """Webhook: one participant's GDA units have been set.
@@ -436,18 +508,38 @@ class EconomicsService:
             }
         )
 
-        await self.kh.execute_workflow(
-            self.settings.kh_workflow_stream_start,
-            inputs=WorkflowInputs.stream_start(
-                session_id=inference_request_id,
-                super_token=self.settings.usdcx_address,
-                pool_address=pp["superfluid_pool_address"],
-                sender=self.settings.orchestrator_wallet_address,
-                flow_rate_wei_per_sec=str(flow_rate),
-                callback_url=self.settings.public_url.rstrip("/")
-                + "/webhooks/keeperhub",
-            ),
+        # TODO(KH-issue): KH 0G writes hang. Submitting GDA distributeFlow
+        # directly. Restore kh.execute_workflow(...) once KH ships the fix.
+        #
+        # await self.kh.execute_workflow(
+        #     self.settings.kh_workflow_stream_start,
+        #     inputs=WorkflowInputs.stream_start(
+        #         session_id=inference_request_id,
+        #         super_token=self.settings.usdcx_address,
+        #         pool_address=pp["superfluid_pool_address"],
+        #         sender=self.settings.orchestrator_wallet_address,
+        #         flow_rate_wei_per_sec=str(flow_rate),
+        #         callback_url=self.settings.public_url.rstrip("/")
+        #         + "/webhooks/keeperhub",
+        #     ),
+        # )
+        if self.onchain is None:
+            raise RuntimeError("onchain submitter required while KH 0G writes are broken")
+        stream_res = await self.onchain.distribute_flow(
+            super_token=self.settings.usdcx_address,
+            sender=self.onchain.address,
+            pool=pp["superfluid_pool_address"],
+            flow_rate_wei_per_sec=flow_rate,
         )
+        logger.info(
+            "stream_start submitted directly session_id=%s tx=%s",
+            inference_request_id, stream_res["tx_hash"],
+        )
+        asyncio.create_task(self.on_stream_started({
+            "session_id": inference_request_id,
+            "tx_hash": stream_res["tx_hash"],
+            "flow_rate": str(flow_rate),
+        }))
 
     async def on_stream_started(self, payload: dict) -> None:
         await self.db.payments.update_one(
@@ -467,17 +559,36 @@ class EconomicsService:
         inference_request_id: str,
     ) -> None:
         pp = await self.db.payment_pools.find_one({"pool_id": pool_id})
-        await self.kh.execute_workflow(
-            self.settings.kh_workflow_stream_stop,
-            inputs=WorkflowInputs.stream_stop(
-                session_id=inference_request_id,
-                super_token=self.settings.usdcx_address,
-                pool_address=pp["superfluid_pool_address"],
-                sender=self.settings.orchestrator_wallet_address,
-                callback_url=self.settings.public_url.rstrip("/")
-                + "/webhooks/keeperhub",
-            ),
+        # TODO(KH-issue): KH 0G writes hang. Submitting GDA distributeFlow
+        # rate=0 directly. Restore kh.execute_workflow(...) once KH ships fix.
+        #
+        # await self.kh.execute_workflow(
+        #     self.settings.kh_workflow_stream_stop,
+        #     inputs=WorkflowInputs.stream_stop(
+        #         session_id=inference_request_id,
+        #         super_token=self.settings.usdcx_address,
+        #         pool_address=pp["superfluid_pool_address"],
+        #         sender=self.settings.orchestrator_wallet_address,
+        #         callback_url=self.settings.public_url.rstrip("/")
+        #         + "/webhooks/keeperhub",
+        #     ),
+        # )
+        if self.onchain is None:
+            raise RuntimeError("onchain submitter required while KH 0G writes are broken")
+        stop_res = await self.onchain.distribute_flow(
+            super_token=self.settings.usdcx_address,
+            sender=self.onchain.address,
+            pool=pp["superfluid_pool_address"],
+            flow_rate_wei_per_sec=0,
         )
+        logger.info(
+            "stream_stop submitted directly session_id=%s tx=%s",
+            inference_request_id, stop_res["tx_hash"],
+        )
+        asyncio.create_task(self.on_stream_stopped({
+            "session_id": inference_request_id,
+            "tx_hash": stop_res["tx_hash"],
+        }))
 
     async def on_stream_stopped(self, payload: dict) -> None:
         await self.db.payments.update_one(
