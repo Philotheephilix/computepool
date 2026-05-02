@@ -4,7 +4,7 @@ import { useState } from "react";
 
 interface Requirements {
   scheme: "exact";
-  network: "sepolia";
+  network: "0g-galileo";
   maxAmountRequired: string;
   resource: string;
   description: string;
@@ -53,9 +53,9 @@ export function PaymentRequiredDialog({ requirements, onSigned, onCancel }: Prop
           ],
         },
         domain: {
-          name: requirements.extra?.name ?? "USD Coin",
+          name: requirements.extra?.name ?? "USDC",
           version: requirements.extra?.version ?? "2",
-          chainId: 11155111,
+          chainId: 16602,
           verifyingContract: requirements.asset,
         },
         primaryType: "TransferWithAuthorization",
@@ -74,7 +74,7 @@ export function PaymentRequiredDialog({ requirements, onSigned, onCancel }: Prop
       const payload = {
         x402Version: 1,
         scheme: "exact",
-        network: "sepolia",
+        network: "0g-galileo",
         payload: {
           signature,
           authorization: typed.message,
@@ -99,7 +99,7 @@ export function PaymentRequiredDialog({ requirements, onSigned, onCancel }: Prop
         <div className="my-4 space-y-1 text-sm">
           <div>Amount: <span className="font-mono">{human} USDC</span></div>
           <div>Pay to: <span className="font-mono text-xs">{requirements.payTo}</span></div>
-          <div>Network: Sepolia</div>
+          <div>Network: 0G-Galileo Testnet</div>
         </div>
         {err && <div className="text-red-600 text-sm mb-2">{err}</div>}
         <div className="flex gap-2 justify-end">

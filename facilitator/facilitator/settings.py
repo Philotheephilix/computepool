@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     relayer_private_key: str = Field(..., pattern=r"^0x[0-9a-fA-F]{64}$")
     usdc_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
 
-    chain_id: int = 11155111
+    chain_id: int = 16602
     usdc_decimals: int = 6
     confirmations: int = 1
     listen_port: int = 4021

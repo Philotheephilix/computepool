@@ -9,7 +9,7 @@ def build_payment_requirements(*, resource: str, max_amount_micro: int,
     s = get_settings()
     return {
         "scheme": "exact",
-        "network": "sepolia",
+        "network": "0g-galileo",
         "maxAmountRequired": str(max_amount_micro),
         "resource": resource,
         "description": description,

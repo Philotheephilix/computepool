@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
-USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+USDC_SEPOLIA = "0xa1B71D35B9B46BA5b8f579B8e5d97C3497678189"
 
 
 def _request(auth, sig):
@@ -10,12 +10,12 @@ def _request(auth, sig):
         "paymentPayload": {
             "x402Version": 1,
             "scheme": "exact",
-            "network": "sepolia",
+            "network": "0g-galileo",
             "payload": {"signature": sig, "authorization": auth},
         },
         "paymentRequirements": {
             "scheme": "exact",
-            "network": "sepolia",
+            "network": "0g-galileo",
             "maxAmountRequired": "1000000",
             "resource": "/pools/test/infer",
             "description": "test",
@@ -23,7 +23,7 @@ def _request(auth, sig):
             "payTo": "0x000000000000000000000000000000000000bEEF",
             "maxTimeoutSeconds": 60,
             "asset": USDC_SEPOLIA,
-            "extra": {"name": "USD Coin", "version": "2"},
+            "extra": {"name": "USDC", "version": "2"},
         },
     }
 

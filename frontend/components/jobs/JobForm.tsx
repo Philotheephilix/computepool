@@ -11,7 +11,7 @@ import { PaymentRequiredDialog } from "@/components/PaymentRequiredDialog";
 
 interface PaymentRequirements {
   scheme: "exact";
-  network: "sepolia";
+  network: "0g-galileo";
   maxAmountRequired: string;
   resource: string;
   description: string;

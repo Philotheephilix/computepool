@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     owner_api_key: str
 
     worker_private_key: str = Field(..., pattern=r"^0x[0-9a-fA-F]{64}$")
-    sepolia_rpc_url: str = "https://ethereum-sepolia-rpc.publicnode.com"
-    gda_v1_forwarder: str = "0x6DA13Bde224A05a288748d857b9e7DDEffd1dE08"
+    sepolia_rpc_url: str = "https://evmrpc-testnet.0g.ai"
+    gda_v1_forwarder: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
 
 
 @lru_cache

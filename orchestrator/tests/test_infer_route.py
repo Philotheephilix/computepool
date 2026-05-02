@@ -41,7 +41,7 @@ def test_infer_runs_with_valid_payment(_orchestrator_env):
 
     pool_doc = {"_id": "p1", "name": "demo", "model_name": "m", "state": "ready"}
     payment = {
-        "x402Version": 1, "scheme": "exact", "network": "sepolia",
+        "x402Version": 1, "scheme": "exact", "network": "0g-galileo",
         "payload": {"signature": "0xsig", "authorization": {
             "from": "0xa", "to": "0xb", "value": "1000",
             "validAfter": "0", "validBefore": "9", "nonce": "0x" + "00"*32}},
@@ -51,7 +51,7 @@ def test_infer_runs_with_valid_payment(_orchestrator_env):
          patch("orchestrator.api.infer.verify_via_facilitator",
                AsyncMock(return_value={"isValid": True, "payer": "0xa"})), \
          patch("orchestrator.api.infer.settle_via_facilitator",
-               AsyncMock(return_value={"success": True, "transaction": "0xtx", "network": "sepolia", "payer": "0xa"})):
+               AsyncMock(return_value={"success": True, "transaction": "0xtx", "network": "0g-galileo", "payer": "0xa"})):
         r = client.post("/pools/demo/infer",
                         json={"prompt": "hi", "max_tokens": 10},
                         headers={"X-PAYMENT": header})
@@ -69,7 +69,7 @@ def test_infer_returns_402_on_invalid_payment(_orchestrator_env):
     client = TestClient(app)
 
     pool_doc = {"_id": "p1", "name": "demo", "model_name": "m", "state": "ready"}
-    payment = {"x402Version": 1, "scheme": "exact", "network": "sepolia",
+    payment = {"x402Version": 1, "scheme": "exact", "network": "0g-galileo",
                "payload": {"signature": "0xsig", "authorization": {
                    "from": "0xa", "to": "0xb", "value": "1000",
                    "validAfter": "0", "validBefore": "9", "nonce": "0x" + "00"*32}}}
@@ -94,7 +94,7 @@ def test_infer_calls_mark_settled_on_success(_orchestrator_env):
     client = TestClient(app)
 
     pool_doc = {"_id": "p1", "name": "demo", "model_name": "m", "state": "ready"}
-    payment = {"x402Version": 1, "scheme": "exact", "network": "sepolia",
+    payment = {"x402Version": 1, "scheme": "exact", "network": "0g-galileo",
                "payload": {"signature": "0xsig", "authorization": {
                    "from": "0xa", "to": "0xb", "value": "1000",
                    "validAfter": "0", "validBefore": "9", "nonce": "0x" + "00"*32}}}
@@ -105,7 +105,7 @@ def test_infer_calls_mark_settled_on_success(_orchestrator_env):
                AsyncMock(return_value={"isValid": True, "payer": "0xa"})), \
          patch("orchestrator.api.infer.settle_via_facilitator",
                AsyncMock(return_value={"success": True, "transaction": "0xtx",
-                                        "network": "sepolia", "payer": "0xa"})):
+                                        "network": "0g-galileo", "payer": "0xa"})):
         r = client.post("/pools/demo/infer",
                         json={"prompt": "hi", "max_tokens": 10},
                         headers={"X-PAYMENT": header})

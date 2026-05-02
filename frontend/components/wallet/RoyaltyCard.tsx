@@ -1,7 +1,7 @@
 "use client";
 
 const LAST_TX_HREF =
-  "https://etherscan.io/tx/0xc4f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8";
+  "https://chainscan-galileo.0g.ai/tx/0xc4f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8";
 
 export function RoyaltyCard({ royaltyEth }: { royaltyEth: number }) {
   return (

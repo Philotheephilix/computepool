@@ -36,4 +36,4 @@ All five workflows POST callbacks to `{{trigger.body.callback_url}}` — the orc
 
 ## ABIs
 
-ABIs are inlined in each `web3/write-contract` action. The Coalition.sol ABI is hand-rolled (the contract is not yet verified on Sepolia at workflow-creation time); the GDAv1Forwarder ABI is also hand-rolled for resilience even though Superfluid's contract is verified. Once `Coalition.sol` is deployed and verified on Sepolia, KH will auto-fetch the ABI; the manual ABIs continue to work either way.
+ABIs are inlined in each `web3/write-contract` action. The Coalition.sol ABI is hand-rolled; the GDAv1Forwarder ABI is hand-rolled because there's no verified deployment of Superfluid on 0G Galileo yet. The manual ABIs work regardless of explorer verification.

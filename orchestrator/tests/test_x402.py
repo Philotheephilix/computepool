@@ -16,7 +16,7 @@ def test_build_payment_requirements(_orchestrator_env):
                                    max_amount_micro=10_000,
                                    description="test")
     assert r["scheme"] == "exact"
-    assert r["network"] == "sepolia"
+    assert r["network"] == "0g-galileo"
     assert r["maxAmountRequired"] == "10000"
     assert r["payTo"].startswith("0x")
     assert r["asset"].startswith("0x")
@@ -24,7 +24,7 @@ def test_build_payment_requirements(_orchestrator_env):
 
 def test_parse_payment_header_roundtrip():
     payload = {
-        "x402Version": 1, "scheme": "exact", "network": "sepolia",
+        "x402Version": 1, "scheme": "exact", "network": "0g-galileo",
         "payload": {"signature": "0xabc",
                     "authorization": {"from": "0x1", "to": "0x2", "value": "1",
                                        "validAfter": "0", "validBefore": "9",
@@ -42,7 +42,7 @@ async def test_verify_via_facilitator(_orchestrator_env, httpx_mock):
         url="http://localhost:4021/verify",
         json={"isValid": True, "payer": "0xabc"},
     )
-    payment = {"x402Version": 1, "scheme": "exact", "network": "sepolia",
+    payment = {"x402Version": 1, "scheme": "exact", "network": "0g-galileo",
                "payload": {"signature": "0x", "authorization": {}}}
     requirements = build_payment_requirements(
         resource="/x", max_amount_micro=1, description="t")
@@ -52,7 +52,7 @@ async def test_verify_via_facilitator(_orchestrator_env, httpx_mock):
 
 def test_build_payment_response_header():
     settle = {"success": True, "transaction": "0xfeed",
-              "network": "sepolia", "payer": "0xpayer"}
+              "network": "0g-galileo", "payer": "0xpayer"}
     h = build_payment_response_header(settle)
     decoded = json.loads(base64.b64decode(h))
     assert decoded["transaction"] == "0xfeed"

@@ -1,13 +1,25 @@
-import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { createPublicClient, defineChain, http } from "viem";
 
-export const SEPOLIA_RPC =
+export const ZEROG_GALILEO_RPC =
   process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ||
-  "https://ethereum-sepolia-rpc.publicnode.com";
+  "https://evmrpc-testnet.0g.ai";
+
+export const zeroGGalileo = defineChain({
+  id: 16602,
+  name: "0G-Galileo-Testnet",
+  nativeCurrency: { name: "OG", symbol: "OG", decimals: 18 },
+  rpcUrls: { default: { http: [ZEROG_GALILEO_RPC] } },
+  blockExplorers: {
+    default: { name: "0G Chainscan", url: "https://chainscan-galileo.0g.ai" },
+  },
+  testnet: true,
+});
+
+export const SEPOLIA_RPC = ZEROG_GALILEO_RPC;
 
 export const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(SEPOLIA_RPC),
+  chain: zeroGGalileo,
+  transport: http(ZEROG_GALILEO_RPC),
 });
 
 export const SUPER_TOKEN_ABI = [

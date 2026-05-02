@@ -11,11 +11,14 @@ services:
       MONGODB_URI: ${MONGODB_URI:-mongodb+srv://maintainer_philix:qwertyuiop@carbonpi.hiozz58.mongodb.net/?retryWrites=true&w=majority}
       MONGODB_DB: ${MONGODB_DB:-computepool}
       # Chain
-      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}
-      USDC_ADDRESS: ${USDC_ADDRESS:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
-      USDCX_ADDRESS: ${USDCX_ADDRESS:-0xb598E6C621618a9f63788816ffb50Ee2862D443B}
-      COALITION_ADDRESS: ${COALITION_ADDRESS:-0x745735AaD3696B506BA7beCcA3a523dFc5537F88}
+      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://evmrpc-testnet.0g.ai}
+      USDC_ADDRESS: ${USDC_ADDRESS:-0xa1B71D35B9B46BA5b8f579B8e5d97C3497678189}
+      USDCX_ADDRESS: ${USDCX_ADDRESS}
+      COALITION_ADDRESS: ${COALITION_ADDRESS:-0x6647E81040a3E9BF658e107360c638c5DD04d1eF}
+      CFA_V1_FORWARDER: ${CFA_V1_FORWARDER}
+      GDA_V1_FORWARDER: ${GDA_V1_FORWARDER}
       ORCHESTRATOR_WALLET_ADDRESS: ${ORCHESTRATOR_WALLET_ADDRESS}
+      ORCHESTRATOR_PRIVATE_KEY: ${ORCHESTRATOR_PRIVATE_KEY}
       # KeeperHub
       KEEPERHUB_API_KEY: ${KEEPERHUB_API_KEY}
       KEEPERHUB_BASE_URL: ${KEEPERHUB_BASE_URL:-https://app.keeperhub.com}
@@ -52,7 +55,8 @@ services:
       AXL_API_URL: http://localhost:9002
       OWNER_API_KEY: ${OWNER_API_KEY:-}
       WORKER_PRIVATE_KEY: ${WORKER_A_PRIVATE_KEY:-}
-      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}
+      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://evmrpc-testnet.0g.ai}
+      GDA_V1_FORWARDER: ${GDA_V1_FORWARDER}
     volumes:
       - node-a-data:/data
       - hf-cache:/root/.cache/huggingface
@@ -79,7 +83,8 @@ services:
       AXL_API_URL: http://localhost:9002
       OWNER_API_KEY: ${OWNER_API_KEY:-}
       WORKER_PRIVATE_KEY: ${WORKER_B_PRIVATE_KEY:-}
-      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}
+      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://evmrpc-testnet.0g.ai}
+      GDA_V1_FORWARDER: ${GDA_V1_FORWARDER}
     volumes:
       - node-b-data:/data
       - hf-cache:/root/.cache/huggingface
@@ -100,6 +105,7 @@ services:
       SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL}
       RELAYER_PRIVATE_KEY: ${RELAYER_PRIVATE_KEY}
       USDC_ADDRESS: ${USDC_ADDRESS}
+      CHAIN_ID: ${CHAIN_ID:-16602}
     ports:
       - "4021:4021"
     networks:

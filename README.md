@@ -130,11 +130,13 @@ All endpoints except `/`, `/health`, `/api/models`, `/auth/*` require `X-API-Key
 This branch wires the existing sharded inference flow to the KeeperHub coalition + Superfluid plugins and gates `/pools/{n}/infer` behind a self-hosted x402 paywall. End-to-end demo lives in `scripts/e2e_demo.py`.
 
 Prereqs:
-- `Coalition.sol` deployed to Ethereum Sepolia (chainId 11155111) and the address recorded in `.env` as `COALITION_ADDRESS`.
-- KeeperHub workflows authored in their UI (see `keeperhub/README.md` for shape).
+- `Coalition.sol` deployed to 0G Galileo Testnet (chainId 16602) and the address recorded in `.env` as `COALITION_ADDRESS`.
+- Superfluid Protocol deployed on 0G Galileo (Host, agreements, factories, GDAv1Forwarder, CFAv1Forwarder).
+- USDC mock (FiatTokenV2-style with EIP-3009 transferWithAuthorization) deployed on 0G; USDCx wrap created via SuperTokenFactory.
+- KeeperHub workflows authored in their UI (see `keeperhub/README.md` for shape) and pointed at chainId 16602.
 - ngrok or similar public URL pointing at the orchestrator for KH webhooks.
-- Sepolia ETH on the orchestrator wallet, both worker wallets, and the facilitator relayer.
-- Sepolia USDC on the demo payer wallet (≥ 10 USDC). Sepolia USDCx float on the orchestrator wallet (≥ 5 USDC wrapped).
+- 0G testnet OG token on the orchestrator wallet, both worker wallets, and the facilitator relayer.
+- USDC on the demo payer wallet (≥ 10 USDC). USDCx float on the orchestrator wallet (≥ 5 USDC wrapped).
 
 Run:
 ```sh

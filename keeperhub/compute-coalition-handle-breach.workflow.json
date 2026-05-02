@@ -36,12 +36,12 @@
         "label": "Coalition.recordBreach",
         "config": {
           "actionType": "web3/write-contract",
-          "integrationId": "REPLACE_WITH_YOUR_WALLET_INTEGRATION_ID",
-          "network": "11155111",
-          "contractAddress": "{{@trigger:Trigger.body.coalition_address}}",
+          "integrationId": "05u5ggiksbjjuxvru76hb",
+          "network": "16602",
+          "contractAddress": "{{@trigger:Trigger.data.coalition_address}}",
           "abiFunction": "recordBreach",
           "abi": "[{\"name\":\"recordBreach\",\"type\":\"function\",\"stateMutability\":\"nonpayable\",\"inputs\":[{\"name\":\"coalitionId\",\"type\":\"uint256\"},{\"name\":\"party\",\"type\":\"address\"},{\"name\":\"evidenceHash\",\"type\":\"bytes32\"}],\"outputs\":[]}]",
-          "functionArgs": "[\"{{@trigger:Trigger.body.onchain_id}}\",\"{{@trigger:Trigger.body.breaching_party}}\",\"{{@trigger:Trigger.body.evidence_hash}}\"]",
+          "functionArgs": "[\"{{@trigger:Trigger.data.onchain_id}}\",\"{{@trigger:Trigger.data.breaching_party}}\",\"{{@trigger:Trigger.data.evidence_hash}}\"]",
           "gasLimitMultiplier": "1.2"
         }
       }
@@ -55,12 +55,12 @@
         "label": "Coalition.slash",
         "config": {
           "actionType": "web3/write-contract",
-          "integrationId": "REPLACE_WITH_YOUR_WALLET_INTEGRATION_ID",
-          "network": "11155111",
-          "contractAddress": "{{@trigger:Trigger.body.coalition_address}}",
+          "integrationId": "05u5ggiksbjjuxvru76hb",
+          "network": "16602",
+          "contractAddress": "{{@trigger:Trigger.data.coalition_address}}",
           "abiFunction": "slash",
           "abi": "[{\"name\":\"slash\",\"type\":\"function\",\"stateMutability\":\"nonpayable\",\"inputs\":[{\"name\":\"coalitionId\",\"type\":\"uint256\"},{\"name\":\"party\",\"type\":\"address\"}],\"outputs\":[]}]",
-          "functionArgs": "[\"{{@trigger:Trigger.body.onchain_id}}\",\"{{@trigger:Trigger.body.breaching_party}}\"]",
+          "functionArgs": "[\"{{@trigger:Trigger.data.onchain_id}}\",\"{{@trigger:Trigger.data.breaching_party}}\"]",
           "gasLimitMultiplier": "1.5"
         }
       }
@@ -74,12 +74,12 @@
         "label": "GDA updateMemberUnits to 0",
         "config": {
           "actionType": "web3/write-contract",
-          "integrationId": "REPLACE_WITH_YOUR_WALLET_INTEGRATION_ID",
-          "network": "11155111",
-          "contractAddress": "0x6DA13Bde224A05a288748d857b9e7DDEffd1dE08",
+          "integrationId": "05u5ggiksbjjuxvru76hb",
+          "network": "16602",
+          "contractAddress": "0xfDF1C52BBe39884Bd9fDF2407903ff3a91a25B17",
           "abiFunction": "updateMemberUnits",
           "abi": "[{\"name\":\"updateMemberUnits\",\"type\":\"function\",\"stateMutability\":\"nonpayable\",\"inputs\":[{\"name\":\"pool\",\"type\":\"address\"},{\"name\":\"memberAddress\",\"type\":\"address\"},{\"name\":\"newUnits\",\"type\":\"uint128\"},{\"name\":\"userData\",\"type\":\"bytes\"}],\"outputs\":[{\"type\":\"bool\"}]}]",
-          "functionArgs": "[\"{{@trigger:Trigger.body.pool_address}}\",\"{{@trigger:Trigger.body.breaching_party}}\",\"0\",\"0x\"]",
+          "functionArgs": "[\"{{@trigger:Trigger.data.pool_address}}\",\"{{@trigger:Trigger.data.breaching_party}}\",\"0\",\"0x\"]",
           "gasLimitMultiplier": "1.2"
         }
       }
@@ -94,9 +94,9 @@
         "config": {
           "actionType": "HTTP Request",
           "httpMethod": "POST",
-          "endpoint": "{{@trigger:Trigger.body.callback_url}}",
+          "endpoint": "{{@trigger:Trigger.data.callback_url}}",
           "httpHeaders": "{\"Content-Type\":\"application/json\"}",
-          "httpBody": "{\"event\":\"breach_slashed\",\"session_id\":\"{{@trigger:Trigger.body.session_id}}\",\"breaching_party\":\"{{@trigger:Trigger.body.breaching_party}}\",\"slash_tx\":\"{{@slash:Coalition.slash.transactionHash}}\",\"units_zero_tx\":\"{{@zero-units:GDA updateMemberUnits to 0.transactionHash}}\"}"
+          "httpBody": "{\"event\":\"breach_slashed\",\"session_id\":\"{{@trigger:Trigger.data.session_id}}\",\"breaching_party\":\"{{@trigger:Trigger.data.breaching_party}}\",\"slash_tx\":\"{{@slash:Coalition.slash.transactionHash}}\",\"units_zero_tx\":\"{{@zero-units:GDA updateMemberUnits to 0.transactionHash}}\"}"
         }
       }
     }

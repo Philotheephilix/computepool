@@ -6,7 +6,7 @@ from facilitator.eip3009 import (
 )
 
 
-USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+USDC_SEPOLIA = "0xa1B71D35B9B46BA5b8f579B8e5d97C3497678189"
 
 
 def test_recover_signer_roundtrip():
@@ -20,13 +20,13 @@ def test_recover_signer_roundtrip():
         "validBefore": "9999999999",
         "nonce": "0x" + "ab" * 32,
     }
-    typed = build_typed_data(usdc_address=USDC_SEPOLIA, chain_id=11155111, authorization=auth)
+    typed = build_typed_data(usdc_address=USDC_SEPOLIA, chain_id=16602, authorization=auth)
     signed = Account.sign_typed_data(acct.key, full_message=typed)
     sig_hex = signed.signature.hex()
     if not sig_hex.startswith("0x"):
         sig_hex = "0x" + sig_hex
 
-    recovered = recover_signer(USDC_SEPOLIA, 11155111, auth, sig_hex)
+    recovered = recover_signer(USDC_SEPOLIA, 16602, auth, sig_hex)
     assert recovered.lower() == acct.address.lower()
 
 

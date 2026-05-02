@@ -23,7 +23,7 @@ def main() -> int:
     pay_to = os.environ["ORCHESTRATOR_WALLET_ADDRESS"]
     usdc = os.environ["USDC_ADDRESS"]
     amount = os.environ.get("AMOUNT_MICRO", "10000")
-    chain_id = int(os.environ.get("CHAIN_ID", "11155111"))
+    chain_id = int(os.environ.get("CHAIN_ID", "16602"))
 
     acct = Account.from_key(key)
     auth = {
@@ -71,7 +71,7 @@ def main() -> int:
         sig = "0x" + sig
 
     payload = {
-        "x402Version": 1, "scheme": "exact", "network": "sepolia",
+        "x402Version": 1, "scheme": "exact", "network": "0g-galileo",
         "payload": {"signature": sig, "authorization": auth},
     }
     sys.stdout.write(base64.b64encode(json.dumps(payload).encode()).decode())

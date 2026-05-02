@@ -31,12 +31,12 @@
         "label": "GDA distributeFlow rate=0",
         "config": {
           "actionType": "web3/write-contract",
-          "integrationId": "REPLACE_WITH_YOUR_WALLET_INTEGRATION_ID",
-          "network": "11155111",
-          "contractAddress": "0x6DA13Bde224A05a288748d857b9e7DDEffd1dE08",
+          "integrationId": "05u5ggiksbjjuxvru76hb",
+          "network": "16602",
+          "contractAddress": "0xfDF1C52BBe39884Bd9fDF2407903ff3a91a25B17",
           "abiFunction": "distributeFlow",
           "abi": "[{\"name\":\"distributeFlow\",\"type\":\"function\",\"stateMutability\":\"nonpayable\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\"},{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"pool\",\"type\":\"address\"},{\"name\":\"requestedFlowRate\",\"type\":\"int96\"},{\"name\":\"userData\",\"type\":\"bytes\"}],\"outputs\":[{\"type\":\"bool\"}]}]",
-          "functionArgs": "[\"{{@trigger:Trigger.body.super_token}}\",\"{{@trigger:Trigger.body.sender}}\",\"{{@trigger:Trigger.body.pool_address}}\",\"0\",\"0x\"]",
+          "functionArgs": "[\"{{@trigger:Trigger.data.super_token}}\",\"{{@trigger:Trigger.data.sender}}\",\"{{@trigger:Trigger.data.pool_address}}\",\"0\",\"0x\"]",
           "gasLimitMultiplier": "1.2"
         }
       }
@@ -51,9 +51,9 @@
         "config": {
           "actionType": "HTTP Request",
           "httpMethod": "POST",
-          "endpoint": "{{@trigger:Trigger.body.callback_url}}",
+          "endpoint": "{{@trigger:Trigger.data.callback_url}}",
           "httpHeaders": "{\"Content-Type\":\"application/json\"}",
-          "httpBody": "{\"event\":\"stream_stopped\",\"session_id\":\"{{@trigger:Trigger.body.session_id}}\",\"tx_hash\":\"{{@stop-flow:GDA distributeFlow rate=0.transactionHash}}\"}"
+          "httpBody": "{\"event\":\"stream_stopped\",\"session_id\":\"{{@trigger:Trigger.data.session_id}}\",\"tx_hash\":\"{{@stop-flow:GDA distributeFlow rate=0.transactionHash}}\"}"
         }
       }
     }

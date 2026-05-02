@@ -54,7 +54,7 @@ class SettleRequest(VerifyRequest):
 class SettleResponse(BaseModel):
     success: bool
     transaction: str | None = None
-    network: str = "sepolia"
+    network: str = "0g-galileo"
     payer: str | None = None
     errorReason: str | None = None
 
@@ -76,7 +76,7 @@ async def verify(req: VerifyRequest) -> VerifyResponse:
             chain_id=settings.chain_id,
             authorization=auth,
             signature=sig,
-            domain_name=extra.get("name", "USD Coin"),
+            domain_name=extra.get("name", "USDC"),
             domain_version=extra.get("version", "2"),
         )
     except Exception as e:
@@ -127,5 +127,5 @@ async def settle(req: SettleRequest) -> SettleResponse:
         success=result["status"] == 1,
         transaction=result["tx_hash"],
         payer=auth["from"],
-        network="sepolia",
+        network="0g-galileo",
     )

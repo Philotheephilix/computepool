@@ -5,8 +5,8 @@ Pre-conditions:
   - orchestrator + workers up
   - facilitator up
   - KEEPERHUB workflows configured
-  - Sepolia USDC funded on the demo payer wallet
-  - Sepolia ETH funded on every wallet
+  - 0G Galileo USDC (mock) funded on the demo payer wallet
+  - 0G Galileo OG token funded on every wallet for gas
 
 Steps:
   1. Register a fresh user, login.
@@ -17,7 +17,7 @@ Steps:
   6. Send /pools/{name}/infer without payment, expect 402.
   7. Sign payment, retry. Expect 200 + tokens + X-PAYMENT-RESPONSE.
   8. Verify Mongo Payment doc is in state "settled".
-  9. Print Etherscan links for every tx hash.
+  9. Print 0G Chainscan links for every tx hash.
 
 Exit 0 on success; non-zero on any step failure.
 """

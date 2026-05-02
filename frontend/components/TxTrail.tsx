@@ -19,7 +19,7 @@ export function TxTrail({ items }: { items: Tx[] }) {
           }>●</span>
           <span className="font-medium">{t.label}</span>
           <a className="font-mono text-xs underline"
-             href={`https://sepolia.etherscan.io/tx/${t.hash}`}
+             href={`https://chainscan-galileo.0g.ai/tx/${t.hash}`}
              target="_blank" rel="noreferrer">
             {t.hash.slice(0, 10)}…
           </a>
