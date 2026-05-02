@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -21,6 +22,11 @@ from .auth import (
     hash_password,
     verify_password,
 )
+from .chain import Chain
+from .economics import EconomicsService
+from .keeperhub import KeeperHubClient
+from .settings import get_settings
+from .webhooks import build_router as build_webhooks_router
 from .models import (
     AuthResponse,
     InferRequest,
@@ -168,6 +174,35 @@ async def lifespan(app: FastAPI):
     database = await db.init_db()
     await db.ensure_economic_indexes(database)
     app.state.http = httpx.AsyncClient(timeout=WORKER_TIMEOUT_DEFAULT)
+
+    # Economics wiring (KH client, on-chain reader, EconomicsService)
+    try:
+        settings = get_settings()
+        kh = KeeperHubClient(
+            api_key=settings.keeperhub_api_key,
+            base_url=settings.keeperhub_base_url,
+        )
+        chain = Chain(
+            rpc_url=settings.sepolia_rpc_url,
+            chain_id=settings.chain_id,
+            usdcx_address=settings.usdcx_address,
+            gda_forwarder=settings.gda_v1_forwarder,
+            coalition_address=settings.coalition_address,
+        )
+        app.state.kh = kh
+        app.state.chain = chain
+        app.state.economics = EconomicsService(
+            db=database,
+            kh=kh,
+            chain=chain,
+            settings=settings,
+            http=app.state.http,
+        )
+        app.include_router(build_webhooks_router(app.state.economics))
+    except Exception:
+        logger.exception("failed to initialize EconomicsService; continuing without it")
+        app.state.economics = None
+
     task = asyncio.create_task(healthcheck_loop(app), name="healthcheck-loop")
     try:
         yield
@@ -177,6 +212,12 @@ async def lifespan(app: FastAPI):
             await task
         except (asyncio.CancelledError, Exception):
             pass
+        kh = getattr(app.state, "kh", None)
+        if kh is not None:
+            try:
+                await kh.aclose()
+            except Exception:
+                pass
         await app.state.http.aclose()
         await db.close_db()
 
@@ -579,6 +620,32 @@ async def pools_initialize(
         },
     )
     pool = await db.pools().find_one({"_id": pool["_id"]})
+
+    # Coalition formation: only proceed if all nodes have wallet_address.
+    economics = getattr(app.state, "economics", None)
+    if economics is not None:
+        participants = [n["wallet_address"] for n in ordered if n.get("wallet_address")]
+        if len(participants) == len(ordered):
+            try:
+                await economics.on_pool_initialize(
+                    pool=pool,
+                    participants=participants,
+                    stake_amount_wei=int(body.stake_amount_wei or 0),
+                    deadline_unix=int(
+                        body.deadline_unix or (int(time.time()) + 3600)
+                    ),
+                )
+            except Exception:
+                logger.exception(
+                    "coalition formation failed for pool=%s; pool initialize still ok",
+                    name,
+                )
+        else:
+            logger.warning(
+                "skipping coalition formation for pool=%s: not all nodes have wallets",
+                name,
+            )
+
     return pool_to_response(pool)
 
 

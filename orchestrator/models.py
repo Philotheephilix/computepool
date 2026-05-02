@@ -163,6 +163,8 @@ class PoolInitializeRequest(BaseModel):
     model: str
     price_per_token_usdc: float = Field(ge=0.0, le=100.0)
     currency: Literal["USDC"] = "USDC"
+    stake_amount_wei: Optional[str] = None
+    deadline_unix: Optional[int] = None
 
 
 class Assignment(BaseModel):
