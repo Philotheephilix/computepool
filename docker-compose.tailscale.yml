@@ -1,0 +1,21 @@
+# Tailscale capability overlay — layer on top of docker-compose.yml when using Tailscale.
+#
+# Usage:
+#   TS_AUTHKEY=tskey-... docker compose -f docker-compose.yml -f docker-compose.tailscale.yml up -d
+# Or via Makefile:
+#   make up-ts TS_AUTHKEY=tskey-...
+#
+# Each worker joins the tailnet as "${NODE_ID}" (node-a / node-b by default).
+# Set PEER_HOST to the peer's Tailscale hostname or IP.
+services:
+  node-a:
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+
+  node-b:
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun

@@ -1,4 +1,4 @@
-.PHONY: build build-gpu up up-gpu down restart logs logs-orch logs-a logs-b ps status clean help
+.PHONY: build build-gpu up up-gpu up-ts down restart logs logs-orch logs-a logs-b ps status clean help
 
 IMAGE         := dis-com:latest
 ORCH          ?= http://localhost:8000
@@ -11,6 +11,8 @@ TORCH_VERSION ?= 2.5.1
 
 # GPU compose: layer the override on top of the base file.
 COMPOSE_GPU   := -f docker-compose.yml -f docker-compose.gpu.yml
+# Tailscale compose: layer the capability override on top of the base file.
+COMPOSE_TS    := -f docker-compose.yml -f docker-compose.tailscale.yml
 
 help:
 	@echo "Build:"
@@ -20,6 +22,7 @@ help:
 	@echo "Run:"
 	@echo "  up            Start the stack. Workers auto-detect: CUDA if visible, else CPU."
 	@echo "  up-gpu        Start the stack and reserve 1 GPU per worker (forces TORCH_DEVICE=cuda)."
+	@echo "  up-ts         Start the stack with Tailscale (requires TS_AUTHKEY=tskey-...)."
 	@echo "  down          Stop the stack"
 	@echo "  restart       down + up"
 	@echo ""
@@ -51,6 +54,9 @@ up:
 
 up-gpu:
 	docker compose $(COMPOSE_GPU) up -d
+
+up-ts:
+	TS_AUTHKEY=$(TS_AUTHKEY) docker compose $(COMPOSE_TS) up -d
 
 down:
 	docker compose down

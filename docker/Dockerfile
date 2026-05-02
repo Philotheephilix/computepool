@@ -34,6 +34,16 @@ RUN apt-get update \
         tini \
  && rm -rf /var/lib/apt/lists/*
 
+# Tailscale — installed unconditionally so the opt-in path works without
+# rebuilding. Only activates at runtime when TS_AUTHKEY is set.
+RUN curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg \
+        | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null \
+ && curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list \
+        | tee /etc/apt/sources.list.d/tailscale.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends tailscale iptables \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY --from=axl-build /out/node /usr/local/bin/node
 RUN chmod +x /usr/local/bin/node
 

@@ -60,6 +60,8 @@ services:
       # GPU: leave TORCH_DEVICE unset to auto-detect; force "cpu" to disable.
       TORCH_DEVICE: ${TORCH_DEVICE:-}
       TORCH_DTYPE: ${TORCH_DTYPE:-}
+      # Tailscale: set TS_AUTHKEY to opt in; use with docker-compose.tailscale.yml overlay.
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
     volumes:
       - node-a-data:/data
       - hf-cache:/root/.cache/huggingface
@@ -90,6 +92,7 @@ services:
       GDA_V1_FORWARDER: ${GDA_V1_FORWARDER}
       TORCH_DEVICE: ${TORCH_DEVICE:-}
       TORCH_DTYPE: ${TORCH_DTYPE:-}
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
     volumes:
       - node-b-data:/data
       - hf-cache:/root/.cache/huggingface

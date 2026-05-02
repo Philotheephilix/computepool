@@ -8,7 +8,10 @@
 #   --peer ADDR           "host:port" or "tls://host:port"
 #
 # Optional: --model, --image, --name, --worker-port, --axl-tcp-port, --axl-api-port,
-#           --data-volume, --hf-cache, --foreground, --dry-run
+#           --data-volume, --hf-cache, --foreground, --dry-run, --tailscale-auth KEY
+#
+# When --tailscale-auth is given: --worker-url is optional (auto-detected from Tailscale IP).
+#   --peer should be the peer's Tailscale IP or MagicDNS hostname.
 
 set -euo pipefail
 
@@ -26,6 +29,7 @@ DATA_VOLUME=""
 HF_CACHE_VOLUME="discom-hf-cache"
 DETACH_FLAG="-d"
 DRY_RUN=0
+TAILSCALE_AUTH=""
 
 usage() {
     sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
@@ -49,6 +53,7 @@ while [ "$#" -gt 0 ]; do
         --detach)         DETACH_FLAG="-d"; shift ;;
         --foreground)     DETACH_FLAG=""; shift ;;
         --dry-run)        DRY_RUN=1; shift ;;
+        --tailscale-auth) TAILSCALE_AUTH="$2"; shift 2 ;;
         -h|--help)        usage 0 ;;
         *) echo "unknown flag: $1" >&2; usage 1 ;;
     esac
@@ -57,7 +62,8 @@ done
 missing=()
 [ -z "${NODE_ID}" ]          && missing+=("--node-id")
 [ -z "${ORCHESTRATOR_URL}" ] && missing+=("--orchestrator")
-[ -z "${WORKER_URL}" ]       && missing+=("--worker-url")
+# WORKER_URL is optional when --tailscale-auth is set (auto-detected inside container)
+[ -z "${WORKER_URL}" ] && [ -z "${TAILSCALE_AUTH}" ] && missing+=("--worker-url")
 [ -z "${PEER}" ]             && missing+=("--peer")
 if [ "${#missing[@]}" -gt 0 ]; then
     echo "error: missing required flag(s): ${missing[*]}" >&2
@@ -84,6 +90,9 @@ cmd=(
     -e "AXL_API_URL=http://localhost:9002"
     -e "PEER_ADDR=${PEER_ADDR}"
     ${OWNER_API_KEY:+-e "OWNER_API_KEY=${OWNER_API_KEY}"}
+    ${TAILSCALE_AUTH:+-e "TS_AUTHKEY=${TAILSCALE_AUTH}"}
+    ${TAILSCALE_AUTH:+--cap-add NET_ADMIN}
+    ${TAILSCALE_AUTH:+--device /dev/net/tun}
     -v "${DATA_VOLUME}:/data"
     -v "${HF_CACHE_VOLUME}:/root/.cache/huggingface"
     -p "${WORKER_PORT}:7000"
