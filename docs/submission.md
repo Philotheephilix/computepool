@@ -61,7 +61,7 @@ Drop-in answers for each field on the submission form. Update in place as you fi
 
 ## Per-prize qualification answers
 
-Repo: <https://github.com/philotheephilix/computepool>
+Repo: <https://github.com/Philotheephilix/computepool>
 
 ### Gensyn — $5,000
 
@@ -71,7 +71,7 @@ Repo: <https://github.com/philotheephilix/computepool>
 
 **Link to the line of code where the tech is used**
 
-<https://github.com/philotheephilix/computepool/blob/main/sponsors/gensyn-axl/README.md>
+<https://github.com/Philotheephilix/computepool/blob/main/sponsors/gensyn-axl/README.md>
 
 (Single README covering every AXL touchpoint: per-token AXL hop in `worker/pipeline.py`, the HTTP wrapper in `worker/axl_client.py`, the bf16-safe binary frame format in `worker/framing.py`, the Tailscale-native compose recipe in `docker-compose.tailscale.yml`, plus the multi-node deploy script and the full file index.)
 
@@ -97,7 +97,7 @@ A single binary on localhost speaking HTTP is genuinely the easiest networking p
 
 **Link to the line of code where the tech is used**
 
-<https://github.com/philotheephilix/computepool/blob/main/sponsors/0g/README.md>
+<https://github.com/Philotheephilix/computepool/blob/main/sponsors/0g/README.md>
 
 (Single README covering every 0G touchpoint: deployed Superfluid contract addresses on Galileo testnet — GDA/CFA forwarders, USDC/USDCx, Coalition, PoolINFT — with explorer links, the code paths that call them, the pooled-GPU SDK, the TEE attestation flow, and the ERC-7857 INFT integration.)
 
@@ -124,7 +124,7 @@ A single binary on localhost speaking HTTP is genuinely the easiest networking p
 
 **Link to the line of code where the tech is used**
 
-<https://github.com/philotheephilix/computepool/blob/main/sponsors/keeperhub/README.md>
+<https://github.com/Philotheephilix/computepool/blob/main/sponsors/keeperhub/README.md>
 
 (Single README covering every KH touchpoint: the MCP/JSON-RPC client in `orchestrator/keeperhub.py`, the five workflow JSON exports in `keeperhub/`, the workflow driver in `orchestrator/economics.py`, the HMAC-verified webhook receiver in `orchestrator/webhooks.py`, the x402 paywall in `orchestrator/x402.py`, the two upstream PRs — [Superfluid plugin #1106](https://github.com/KeeperHub/keeperhub/pull/1106) and [Coalition plugin #1105](https://github.com/KeeperHub/keeperhub/pull/1105) — and the full file index.)
 
