@@ -4,9 +4,8 @@ import * as React from "react";
 import { useT, FONT_DISPLAY, FONT_BODY, FONT_MONO } from "@/components/cp/theme";
 import { Badge, Button, Card } from "@/components/cp/primitives";
 import { Stat } from "@/components/cp/dashboard-bits";
-import { listJobs, totalsByWindow, ago, type JobRecord } from "@/lib/job-history";
-import { useBreakpoint } from "@/lib/use-breakpoint";
 import { listJobs, totalsByWindow, ago, clearJobs, type JobRecord } from "@/lib/job-history";
+import { useBreakpoint } from "@/lib/use-breakpoint";
 
 const EXPLORER = "https://chainscan-galileo.0g.ai/tx/";
 
