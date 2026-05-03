@@ -927,13 +927,13 @@ const SLIDES: Slide[] = [
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 18 }}>
             <div>
               <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: TEXT3 }}>Founder</div>
-              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: "#F4F4F0", fontWeight: 600, marginTop: 4 }}>Founder Name</div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: TEXT2, marginTop: 2 }}>founder@computepool.xyz</div>
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: "#F4F4F0", fontWeight: 600, marginTop: 4 }}>Philo & Freedan</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: TEXT2, marginTop: 2 }}>hello@philotheephilix.in</div>
             </div>
             <div style={{ height: 1, background: BORDER }}/>
             <div>
               <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: TEXT3 }}>Live product</div>
-              <Link href="/" style={{ fontFamily: FONT_MONO, fontSize: 14, color: ACCENT_BRIGHT, textDecoration: "none", marginTop: 6, display: "inline-block" }}>computepool.xyz ↗</Link>
+              <Link href="/" style={{ fontFamily: FONT_MONO, fontSize: 14, color: ACCENT_BRIGHT, textDecoration: "none", marginTop: 6, display: "inline-block" }}>computepool.vercel.app ↗</Link>
             </div>
             <div style={{ height: 1, background: BORDER }}/>
             <div>

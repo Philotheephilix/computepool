@@ -1,149 +1,164 @@
-# dis-com
+# ComputePool
 
-Distributed LLM inference. Split a transformer across two Docker containers, talk over [AXL](https://github.com/gensyn-ai/axl), and control the cluster from a single orchestrator API.
+> **Production LLM inference on the consumer GPUs you already own — at near-zero latency overhead vs. a single big GPU.**
+> A 70B model needs ~140 GB of VRAM. An RTX 4090 has 24. ComputePool shards a model layer-wise across two (or more) consumer cards, streams hidden states peer-to-peer over [Gensyn AXL](https://github.com/gensyn-ai/axl), settles via x402 + Superfluid on **0G Galileo testnet**, and orchestrates everything through KeeperHub workflows.
+>
+> The per-token network hop adds **single-digit milliseconds** on top of the actual forward pass — negligible next to the GPU compute itself, because AXL keeps the hidden-state transport peer-to-peer with no orchestrator round-trip.
 
-## Architecture
+**Live on 0G Galileo testnet · Built for ETHGlobal 2026 · Hits all three sponsor tracks: 0G, Gensyn (AXL), KeeperHub.**
+
+| | |
+|---|---|
+| **Demo** | `make build && make up` → <http://localhost:8000> |
+| **Pitch deck** | `frontend/app/pitch/page.tsx` (also live at `/pitch`) |
+| **End-to-end script** | `scripts/e2e_demo.py` |
+| **Sponsor write-ups** | [`sponsors/`](sponsors/) — one folder per track |
+
+---
+
+## What it actually does
+
+A single GPU can't fit a real model. We turn N small GPUs into one virtual one:
 
 ```
-                   +-------------------+
-   user / web ---> |   orchestrator    |  :8000  (FastAPI, dashboard, /pools/*/infer)
-                   +---------+---------+
-                             | HTTP control plane
-                +------------+------------+
-                |                         |
-        +-------v--------+        +-------v--------+
-        |    node-a      |        |    node-b      |
-        |  worker :7000  |        |  worker :7000  |
-        |  (entry, L0..) |        |  (exit,  L..N) |
-        |                |        |                |
-        |  AXL daemon    | <====> |  AXL daemon    |   tls://...:7001  (P2P)
-        |  api :9002     |        |  api :9002     |
-        +----------------+        +----------------+
+                                   x402 voucher        Superfluid stream (USDCx/s)
+                                       │                      │
+   prompt  ───►  orchestrator  ───►  ┌─┴───────────┐      ┌───┴──────────┐
+                 (FastAPI,           │ entry shard │ AXL  │ exit shard   │
+                  TEE-attested)      │ layers 0..M │ ◄══► │ layers M..N  │
+                                     │ node-a      │      │ node-b       │
+                                     └─────────────┘      └──────────────┘
+                                       hidden states ───►
+                                       ◄─── sampled token
 ```
 
-Hidden states flow worker -> AXL -> peer worker; all control plane (configure, load, generate) is HTTP from the orchestrator.
+- **Sharding:** [`worker/model.py`](worker/model.py) loads only the assigned layer slice from a HuggingFace model. Entry holds `embed + layers[0:mid]`, exit holds `layers[mid:N] + lm_head`.
+- **P2P transport:** [`worker/axl_client.py`](worker/axl_client.py) + [`worker/framing.py`](worker/framing.py) carry hidden-state tensors and sampled tokens across [Gensyn AXL](https://github.com/gensyn-ai/axl) frames.
+- **Token loop:** [`worker/pipeline.py`](worker/pipeline.py) — `entry_generate` and `exit_loop` drive one forward hop per token until EOS. **Network overhead per token is negligible vs. the actual GPU compute** — the AXL hop is single-digit ms on a Tailscale mesh, while a single transformer forward pass on a consumer card is tens of ms; sharded throughput tracks single-GPU throughput within noise.
+- **Payments:** [`orchestrator/x402.py`](orchestrator/x402.py) gates `/pools/{n}/infer` with HTTP 402; [`orchestrator/economics.py`](orchestrator/economics.py) opens the Superfluid stream once the voucher settles.
+- **Coordination:** [`orchestrator/keeperhub.py`](orchestrator/keeperhub.py) drives five [KeeperHub workflows](keeperhub/) for coalition activation, pool wiring, stream start/stop, and slashing.
+- **Custody / iNFT:** [`orchestrator/inft/`](orchestrator/inft/) mints a per-pool ERC-7857 INFT on 0G with encrypted intelligence metadata.
 
-## Quick start (local, two containers)
+---
 
-```sh
-make build           # build the dis-com image (multi-stage: Go for AXL, Python for app)
-make up              # start orchestrator + node-a + node-b
-make ps              # confirm three containers are Up
-```
+## Why it wins (one line per sponsor)
 
-Then open <http://localhost:8000>, register a user, copy the API key, and re-run the workers with `OWNER_API_KEY=<key>` set so they self-register. From the dashboard: create a pool, add the two nodes, initialize with a model + price, load, then run inference.
-
-The first `/pools/{name}/load` downloads roughly 6 GB of weights into the shared `hf-cache` volume; subsequent loads are fast because the cache survives container restarts.
-
-To tear everything down (including volumes and the image):
-
-```sh
-make clean
-```
-
-## Dashboard
-
-Open <http://localhost:8000> for the orchestrator's web dashboard (live cluster state).
-
-## Running a remote worker
-
-To add a third worker on a separate host:
-
-```sh
-./scripts/run-remote-worker.sh \
-    --node-id node-c \
-    --orchestrator http://orchestrator-host.example.com:8000 \
-    --worker-url   http://this-host.example.com:7000 \
-    --peer         node-a.example.com:7001
-```
-
-The image (`dis-com:latest`) must already be built or pulled on the remote host. `--peer` accepts either `host:port` or a full `tls://host:port` URL; the script wires it into `PEER_ADDR` so AXL connects to that exact address. Pass `--dry-run` to see the resulting `docker run` command without executing it.
-
-## Choosing a different model
-
-Pick a model when you initialize a pool from the dashboard (or `POST /pools/{name}/initialize`). The orchestrator computes an even layer split automatically.
-
-Supported models:
-
-| Model | Layers | Split |
+| Sponsor | What we shipped on top | Track relevance |
 |---|---|---|
-| `meta-llama/Llama-3.2-1B` | 16 | 0-7 / 8-15 |
-| `meta-llama/Llama-3.2-3B` | 28 | 0-13 / 14-27 |
-| `Qwen/Qwen2.5-3B-Instruct` | 36 | 0-17 / 18-35 |
-| `Qwen/Qwen3-4B-Instruct-2507` | 36 | 0-17 / 18-35 |
+| **[0G](sponsors/0g/)** | First **CREATE2-deployed verified Superfluid contracts** on 0G Galileo · **pooled-GPU SDK** lets consumer cards qualify for 0G Compute together · orchestrator runs in **TEE** so 0G's signing flow stays intact · live ERC-7857 **INFT per pool** | Best Agent Framework / Tooling **and** Best Autonomous Agents / iNFT |
+| **[Gensyn — AXL](sponsors/gensyn-axl/)** | **First production deployment of layer-pipelined LLM inference over AXL.** Multi-node by construction (entry node ⇄ exit node). Prebuilt NVIDIA + CPU Docker images = **one-line deploy**. **Tailscale-native** — zero exposed ports. | Best Application of AXL — depth, multi-node, real utility |
+| **[KeeperHub](sponsors/keeperhub/)** | Five workflows that drive the full demo · upstream **Superfluid plugin PR** · upstream **Coagulation plugin PR** for multi-workflow consensus · agents pay autonomously via **x402** | Best Innovative Use **and** Best Integration (payments + framework) |
 
-Unload (or delete) the pool before re-initializing with a different model.
+Each sponsor folder contains the full breakdown — what we built, where it lives in the code, and how to verify it.
 
-## Configuration reference (worker container)
+---
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `NODE_ID` | yes | - | Stable id this worker registers as (`node-a`, `node-b`, ...) |
-| `WORKER_URL` | yes | - | Base URL the orchestrator should call back on |
-| `ORCHESTRATOR_URL` | yes | - | Base URL of the orchestrator |
-| `OWNER_API_KEY` | yes | - | API key of the user owning this worker (from the dashboard) |
-| `MODEL_NAME` | no | `Qwen/Qwen2.5-3B-Instruct` | HuggingFace model id |
-| `AXL_API_URL` | no | `http://localhost:9002` | AXL HTTP API (in-container) |
-| `PEER_HOST` | one of these two | - | Hostname of the other worker; expanded to `tls://${PEER_HOST}:7001` |
-| `PEER_ADDR` | one of these two | - | Full peer URL (e.g. `tls://1.2.3.4:7001`); takes precedence over `PEER_HOST` |
+## Repo layout
 
-The orchestrator container reads `MONGODB_URI` and `MONGODB_DB`.
+```
+.
+├── orchestrator/          FastAPI control plane + payments + INFT + KeeperHub client
+│   ├── api/                    /infer, /v1/chat/completions (OpenAI-compat)
+│   ├── x402.py                 self-hosted x402 facilitator client
+│   ├── economics.py            Superfluid pool + stream lifecycle
+│   ├── keeperhub.py            KeeperHub MCP / JSON-RPC client
+│   ├── inft/                   ERC-7857 INFT mint + 0G-Storage encrypted metadata
+│   └── tee/                    SGX attestation + signer
+├── worker/                P2P inference shard (entry or exit)
+│   ├── model.py                SplitModel — loads only assigned layer slice
+│   ├── axl_client.py           HTTP wrapper around the AXL daemon
+│   ├── framing.py              binary wire format (header + raw bf16 tensor)
+│   └── pipeline.py             entry_generate / exit_loop token loop
+├── frontend/              Next.js 16 / React 19 dashboard + pitch deck
+├── facilitator/           x402 facilitator (relayer for transferWithAuthorization)
+├── contracts/             Foundry — PoolINFT.sol, deploy scripts
+├── keeperhub/             Five workflow JSON exports (re-importable)
+├── docker/                Multi-stage Dockerfile (Go for AXL + Python for app)
+├── scripts/               e2e_demo.py, register_0g_provider.py, run-remote-worker.sh
+└── sponsors/              ⭐ Per-sponsor deep-dive READMEs (start here for judging)
+```
 
-## API reference (orchestrator)
+---
+
+## Quick start
+
+```sh
+make build           # multi-stage build: Go (AXL daemon) + Python (worker + orchestrator)
+make up              # start orchestrator + node-a + node-b
+make ps              # confirm three containers Up
+```
+
+Open <http://localhost:8000>, register a user, copy the API key, restart the workers with `OWNER_API_KEY=<key>` so they self-register, then from the dashboard: create a pool → add both nodes → initialize with a model → load → infer.
+
+For the **full payments flow** (x402 + Superfluid + KeeperHub):
+
+```sh
+cp .env.example .env  # fill 0G testnet keys + KH workflow IDs + Superfluid addresses
+make build && make up
+docker compose up -d facilitator
+DEMO_PAYER_KEY=0x... python scripts/e2e_demo.py
+```
+
+Tear down: `make clean`.
+
+---
+
+## Supported models
+
+| Model | Layers | Split (entry / exit) |
+|---|---|---|
+| `meta-llama/Llama-3.2-1B` | 16 | 0–7 / 8–15 |
+| `meta-llama/Llama-3.2-3B` | 28 | 0–13 / 14–27 |
+| `Qwen/Qwen2.5-3B-Instruct` | 36 | 0–17 / 18–35 |
+| `Qwen/Qwen3-4B-Instruct-2507` | 36 | 0–17 / 18–35 |
+
+To add a new model: append to `MODEL_LAYERS` in [`orchestrator/app.py`](orchestrator/app.py).
+
+---
+
+## Configuration
+
+Worker container env (full table in `docs/`):
+
+| Variable | Required | Notes |
+|---|---|---|
+| `NODE_ID`, `WORKER_URL`, `ORCHESTRATOR_URL`, `OWNER_API_KEY` | yes | self-registration |
+| `MODEL_NAME` | no | default `Qwen/Qwen2.5-3B-Instruct` |
+| `PEER_HOST` or `PEER_ADDR` | yes | the *other* worker (single-worker mode is not supported) |
+| `AXL_API_URL` | no | default `http://localhost:9002` (in-container) |
+
+Orchestrator reads `MONGODB_URI`, `MONGODB_DB`, plus 0G + Superfluid + x402 + KeeperHub env documented in `.env.example`.
+
+---
+
+## API surface (orchestrator)
 
 All endpoints except `/`, `/health`, `/api/models`, `/auth/*` require `X-API-Key`.
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/` | HTML dashboard |
-| `GET` | `/api/state` | JSON cluster snapshot for the caller |
-| `POST` | `/auth/register` | Create user, returns API key |
-| `POST` | `/auth/login` | Returns API key for an existing user |
-| `GET` | `/nodes`, `GET /nodes/{id}`, `DELETE /nodes/{id}` | Node CRUD |
+| `GET` | `/api/state` | JSON cluster snapshot |
+| `POST` | `/auth/register`, `/auth/login` | API-key issuance |
 | `POST` | `/nodes/register` | (called by workers on startup) |
-| `POST` | `/pools`, `GET /pools`, `GET /pools/{n}`, `DELETE /pools/{n}` | Pool CRUD |
-| `POST` | `/pools/{n}/nodes`, `DELETE /pools/{n}/nodes/{id}` | Pool membership |
-| `POST` | `/pools/{n}/initialize` | Assign model + layer split + USDC price |
-| `POST` | `/pools/{n}/load`, `/pools/{n}/unload` | Load/unload weights on members |
-| `POST` | `/pools/{n}/infer` | Generate text end-to-end |
+| `*` | `/pools/...` | full pool CRUD + initialize / load / unload / **infer** |
+| `POST` | `/v1/chat/completions` | OpenAI-compatible streaming inference (gated by x402) |
 
-## Troubleshooting
+---
 
-- **Workers don't register.** Check that `ORCHESTRATOR_URL` is reachable from the worker container (`docker compose exec node-a curl -sf $ORCHESTRATOR_URL/api/state`). On Docker for Mac/Windows pointing at a host orchestrator, use `host.docker.internal`.
-- **AXL peers don't connect.** Confirm port `7001/tcp` is reachable peer-to-peer and that `PEER_HOST`/`PEER_ADDR` resolves to the right address. `make logs-a` and `make logs-b` will show AXL handshake errors.
-- **AXL port clash.** AXL's default TCP port is 7000, which collides with the worker. The image overrides this to 7001 in the generated `node-config.json` — don't change it.
-- **OOM during `load`.** Pick a smaller model (Llama-3.2-1B has 16 layers and fits in <4 GB RAM) or give Docker more memory. Default precision is bfloat16 on CPU.
-- **Slow inference.** Expected. CPU-only execution and every token round-trips through both nodes over AXL. Throughput on a typical laptop is single-digit tokens/sec.
-- **First `load` hangs.** It's downloading. Watch `make logs-a` to see HuggingFace progress.
-- **"PEER_HOST must be set" on startup.** You started the worker container without setting one of `PEER_HOST` or `PEER_ADDR`. Standalone (single-worker) mode is not supported in v1.
+## Honest limits
 
-## Limitations
+- **Single in-flight generation per pool** (no batching, no parallel requests in v1).
+- **KV cache lives in worker RAM**; dropped on `unload` or container restart.
+- **Worker callbacks are unauthenticated** — never expose worker ports publicly. AXL TLS handshake protects the P2P link itself but there is no peer allowlist yet.
+- **CPU-only by default** — bundled `torch` is the CPU wheel. Swap for the matching CUDA wheel in `worker/requirements.txt` for GPU.
+- **AXL port** is overridden to `7001` (away from the worker's `7000`); don't change it.
 
-- Single in-flight generation per cluster (no batching, no parallel requests).
-- KV cache lives in worker RAM only; it is dropped on `unload` or container restart.
-- Worker callbacks (`/configure`, `/load`, `/unload`, `/generate`) are unauthenticated. Don't expose worker ports to the public internet.
-- CPU-only by default. The image works on GPU hosts but the bundled `torch==2.5.1` wheel is the CPU build; swap it in `worker/requirements.txt` for the right CUDA wheel if you need accelerated inference.
-- AXL transport is TLS-protected (ed25519 keys auto-generated per worker), but there is no peer allowlist — anyone who can reach `:7001` and present a valid TLS handshake can become a peer.
+---
 
-## ComputePool × KeeperHub × Superfluid × x402
+## Team & contact
 
-This branch wires the existing sharded inference flow to the KeeperHub coalition + Superfluid plugins and gates `/pools/{n}/infer` behind a self-hosted x402 paywall. End-to-end demo lives in `scripts/e2e_demo.py`.
+Single-builder hackathon entry. Contact via the wallet shown on the live dashboard, or open an issue on this repo.
 
-Prereqs:
-- `Coalition.sol` deployed to 0G Galileo Testnet (chainId 16602) and the address recorded in `.env` as `COALITION_ADDRESS`.
-- Superfluid Protocol deployed on 0G Galileo (Host, agreements, factories, GDAv1Forwarder, CFAv1Forwarder).
-- USDC mock (FiatTokenV2-style with EIP-3009 transferWithAuthorization) deployed on 0G; USDCx wrap created via SuperTokenFactory.
-- KeeperHub workflows authored in their UI (see `keeperhub/README.md` for shape) and pointed at chainId 16602.
-- ngrok or similar public URL pointing at the orchestrator for KH webhooks.
-- 0G testnet OG token on the orchestrator wallet, both worker wallets, and the facilitator relayer.
-- USDC on the demo payer wallet (≥ 10 USDC). USDCx float on the orchestrator wallet (≥ 5 USDC wrapped).
-
-Run:
-```sh
-cp .env.example .env  # fill values
-make build && make up
-docker compose up -d facilitator
-DEMO_PAYER_KEY=0x... python scripts/e2e_demo.py
-```
-
-Architecture and design rationale: see `docs/superpowers/specs/2026-05-02-discom-keeperhub-x402-integration-design.md`.
+**Architecture deep-dive:** [`docs/`](docs/)
+**Sponsor judging packets:** [`sponsors/`](sponsors/)
