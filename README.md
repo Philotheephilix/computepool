@@ -47,7 +47,7 @@ A single GPU can't fit a real model. We turn N small GPUs into one virtual one:
 |---|---|---|
 | **[0G](sponsors/0g/)** | First **CREATE2-deployed verified Superfluid contracts** on 0G Galileo · **pooled-GPU SDK** lets consumer cards qualify for 0G Compute together · orchestrator runs in **TEE** so 0G's signing flow stays intact · live ERC-7857 **INFT per pool** | Best Agent Framework / Tooling **and** Best Autonomous Agents / iNFT |
 | **[Gensyn — AXL](sponsors/gensyn-axl/)** | **First production deployment of layer-pipelined LLM inference over AXL.** Multi-node by construction (entry node ⇄ exit node). Prebuilt NVIDIA + CPU Docker images = **one-line deploy**. **Tailscale-native** — zero exposed ports. | Best Application of AXL — depth, multi-node, real utility |
-| **[KeeperHub](sponsors/keeperhub/)** | Five workflows that drive the full demo · upstream **Superfluid plugin PR** · upstream **Coagulation plugin PR** for multi-workflow consensus · agents pay autonomously via **x402** | Best Innovative Use **and** Best Integration (payments + framework) |
+| **[KeeperHub](sponsors/keeperhub/)** | Five workflows that drive the full demo · upstream [**Superfluid plugin (#1106)**](https://github.com/KeeperHub/keeperhub/pull/1106) · upstream [**Coalition plugin (#1105)**](https://github.com/KeeperHub/keeperhub/pull/1105) — multi-party on-chain commitments with slashing · agents pay autonomously via **x402** | Best Innovative Use **and** Best Integration (payments + framework) |
 
 Each sponsor folder contains the full breakdown — what we built, where it lives in the code, and how to verify it.
 

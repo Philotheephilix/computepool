@@ -645,7 +645,7 @@ const SLIDES: Slide[] = [
           We brought streaming money<br/>to the workflow layer.
         </h2>
         <p style={{ fontFamily: FONT_BODY, fontSize: 16, color: TEXT2, lineHeight: 1.55, marginBottom: 28, maxWidth: 880 }}>
-          Keeperhub orchestrates on-chain workflows but had no native way to handle continuous payouts or multi-worker consensus. We upstreamed both — and a unified payment model that combines x402 vouchers with Superfluid streams.
+          KeeperHub orchestrates on-chain workflows but had no native way to handle continuous payouts or multi-party operator commitments. We upstreamed both — Superfluid streams and a Coalition plugin with slashing — and unified them with x402 into one workflow primitive.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
           <InnovCard color={SUPER}>
@@ -654,17 +654,17 @@ const SLIDES: Slide[] = [
               Native Superfluid actions — open, update, close streams — callable from any Keeperhub workflow.
             </div>
             <div style={{ marginTop: "auto", paddingTop: 8 }}>
-              <PRBadge pr="keeperhub#142" status="open" color={SUPER} href="https://github.com/keeperhub/keeperhub/pull/142"/>
+              <PRBadge pr="KeeperHub#1106" status="open" color={SUPER} href="https://github.com/KeeperHub/keeperhub/pull/1106"/>
             </div>
           </InnovCard>
 
           <InnovCard color={SUPER}>
-            <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 18, color: "#F4F4F0", letterSpacing: "-0.01em" }}>Coagulation plugin</div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 18, color: "#F4F4F0", letterSpacing: "-0.01em" }}>Coalition plugin</div>
             <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: TEXT2, lineHeight: 1.55 }}>
-              Multi-workflow consensus: N independent runs vote on an output before settlement. Distributed verifiability for any keeper job.
+              Multi-party on-chain commitments with slashing — N operators commit to serve a model; the keeper enforces and slashes any that breach.
             </div>
             <div style={{ marginTop: "auto", paddingTop: 8 }}>
-              <PRBadge pr="keeperhub#156" status="open" color={SUPER} href="https://github.com/keeperhub/keeperhub/pull/156"/>
+              <PRBadge pr="KeeperHub#1105" status="open" color={SUPER} href="https://github.com/KeeperHub/keeperhub/pull/1105"/>
             </div>
           </InnovCard>
 

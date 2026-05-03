@@ -1,6 +1,10 @@
 # KeeperHub — sponsor judging packet
 
-> **TL;DR.** ComputePool drives its **entire** payment + coalition lifecycle through KeeperHub workflows — five of them — and we extended KeeperHub upstream with two PRs: a **Superfluid plugin** (native streaming-money actions) and a **Coagulation plugin** (multi-workflow consensus). Agents pay autonomously via **x402 vouchers** at session open and earn **per-second Superfluid streams** while inference runs. This is the first project to wire KeeperHub to both halves of the agent-economy stack: atomic pay-per-call **and** continuous payouts.
+> **TL;DR.** ComputePool drives its **entire** payment + coalition lifecycle through KeeperHub workflows — five of them — and we shipped two upstream PRs against `KeeperHub/keeperhub:staging`:
+> - [**#1106 — Superfluid plugin**](https://github.com/KeeperHub/keeperhub/pull/1106) (12 commits) — native streaming-money actions
+> - [**#1105 — Coalition plugin**](https://github.com/KeeperHub/keeperhub/pull/1105) (18 commits) — multi-party on-chain commitments with slashing
+>
+> Agents pay autonomously via **x402 vouchers** at session open and earn **per-second Superfluid streams** while inference runs. This is the first project to wire KeeperHub to both halves of the agent-economy stack: atomic pay-per-call **and** continuous payouts.
 
 > *"We brought streaming money to the workflow layer."* — pitch deck, slide 6.
 
@@ -30,17 +34,17 @@ This isn't *using* KeeperHub. It is **using KeeperHub as the system of record fo
 
 KeeperHub had no Superfluid actions. We built and upstreamed a native plugin so any KH workflow can `createPool`, `updateMemberUnits`, `distributeFlow` without bespoke contract calls.
 
-- See PR badge on the pitch deck (slide 6) — `keeperhub#142` (placeholder; swap to real PR URL on submission).
+- **PR:** [KeeperHub#1106 — `feat: add Superfluid protocol`](https://github.com/KeeperHub/keeperhub/pull/1106) (12 commits, base `KeeperHub/keeperhub:staging`, head `Philotheephilix:feat/superfluid-protocol`).
 - Specification: [`PRD-2-superfluid-plugin.md`](../../PRD-2-superfluid-plugin.md) at the repo root.
-- Driver/consumer: [`orchestrator/economics.py`](../../orchestrator/economics.py) — every Superfluid call we make is structured to match the plugin's action shape, so the same orchestrator can switch to the plugin once the PR merges.
+- Driver/consumer: [`orchestrator/economics.py`](../../orchestrator/economics.py) — every Superfluid call we make is structured to match the plugin's action shape, so the same orchestrator switches to the plugin once the PR merges.
 
-### 3. Upstream PR — Coagulation plugin (multi-workflow consensus)
+### 3. Upstream PR — Coalition plugin (multi-party on-chain commitments with slashing)
 
-KeeperHub workflows run individually — there's no native primitive for "N workflows compute the same job and vote on a result before the keeper acts." That matters for any agent that touches money. We built a **Coagulation plugin** that gives KeeperHub distributed consensus across workflow runs.
+KeeperHub had no native primitive for "N parties commit on-chain to do a thing; if any breach, the keeper slashes." That's the core of any operator coalition that touches money. We built a **Coalition plugin** that gives KeeperHub a first-class multi-party commitment + enforcement primitive.
 
-- See PR badge on the pitch deck (slide 6) — `keeperhub#156` (placeholder; swap to real PR URL on submission).
+- **PR:** [KeeperHub#1105 — `feat: add Coalition plugin (multi-party on-chain commitments with slashing)`](https://github.com/KeeperHub/keeperhub/pull/1105) (18 commits, base `KeeperHub/keeperhub:staging`, head `Philotheephilix:feat/KEEP-XXX-coalition-plugin`).
 - Specification: [`PRD-1-coalition-plugin.md`](../../PRD-1-coalition-plugin.md) at the repo root.
-- Use case in this product: the slashing path (workflow #5) gates a slash event behind N independent runs agreeing the breach happened — anti-collusion for free.
+- Use case in this product: the slashing path (workflow #5 — `compute-coalition-handle-breach`) records a breach against the coalition, slashes the breaching operator's stake, and zeroes their `updateMemberUnits` so they stop earning instantly.
 
 ### 4. x402 + streaming = one workflow primitive
 
@@ -62,8 +66,8 @@ Per the KH brief, agents pay autonomously via **x402** in our integration. Our O
 
 | Before ComputePool | After |
 |---|---|
-| KH has no native streaming-money action — workflows pay in single transfers only. | Superfluid plugin (PR `keeperhub#142`) — native `createPool`, `updateMemberUnits`, `distributeFlow` actions. |
-| KH has no primitive for cross-workflow consensus / anti-collusion. | Coagulation plugin (PR `keeperhub#156`) — N workflows vote on a result before the keeper acts. |
+| KH has no native streaming-money action — workflows pay in single transfers only. | Superfluid plugin ([PR #1106](https://github.com/KeeperHub/keeperhub/pull/1106)) — native `createPool`, `updateMemberUnits`, `distributeFlow` actions. |
+| KH has no primitive for multi-party on-chain commitments with slashing. | Coalition plugin ([PR #1105](https://github.com/KeeperHub/keeperhub/pull/1105)) — N parties commit, the keeper enforces and slashes any that breach. |
 | KH integrates with x402 for inbound payments only. No reference for combining x402 with continuous payouts. | First product wiring x402 → KeeperHub → Superfluid as a single agent-pays-per-call-then-per-second flow. |
 | KH integrations are mostly DeFi-flavored. | First AI-infrastructure deployment of KH — execution layer for an actual GPU coalition. |
 
@@ -87,7 +91,7 @@ This packet covers both KeeperHub focus areas (one ranked prize pool).
 
 - **Both halves of agent payments wired in.** x402 for atomic session open. Superfluid for per-second metering. KeeperHub orchestrates the boundary between them.
 - **Plus a framework integration:** the OpenAI-compatible router ([`orchestrator/api/openai_compat.py`](../../orchestrator/api/openai_compat.py)) means any LangChain / CrewAI / OpenAgents client speaks to ComputePool with no SDK — and the back end runs through KH.
-- **Plus two upstream contributions:** Superfluid plugin + Coagulation plugin. We didn't just integrate, we extended.
+- **Plus two upstream contributions:** Superfluid plugin ([#1106](https://github.com/KeeperHub/keeperhub/pull/1106)) + Coalition plugin ([#1105](https://github.com/KeeperHub/keeperhub/pull/1105)). We didn't just integrate, we extended.
 
 ### 🔍 Builder Feedback Bounty (also applicable)
 
@@ -129,7 +133,7 @@ orchestrator/x402.py                             x402 paywall (the inbound rail 
 orchestrator/api/openai_compat.py                OpenAI-compat router with x402 challenge
 orchestrator/api/openai_auth.py                  Per-call auth flow for OpenAI-compat
 facilitator/                                     x402 facilitator (relayer)
-PRD-1-coalition-plugin.md                        Coagulation plugin spec (upstream PR)
+PRD-1-coalition-plugin.md                        Coalition plugin spec (upstream PR #1105)
 PRD-2-superfluid-plugin.md                       Superfluid plugin spec (upstream PR)
 PRD-3-discom-integration.md                      Full integration design
 scripts/e2e_demo.py                              End-to-end demo: x402 → KH → Superfluid → inference
@@ -137,11 +141,11 @@ scripts/e2e_demo.py                              End-to-end demo: x402 → KH �
 
 ---
 
-## Open PR pointers (placeholders — swap on submission)
+## Open PRs (live)
 
-| PR | What it adds |
-|---|---|
-| `keeperhub#142` — Superfluid plugin | Native streaming-money actions (`createPool`, `updateMemberUnits`, `distributeFlow`) callable from any KH workflow |
-| `keeperhub#156` — Coagulation plugin | Multi-workflow consensus primitive — N workflows vote on a result before the keeper acts |
+| PR | Title | Commits | Branch |
+|---|---|---:|---|
+| [`KeeperHub/keeperhub#1106`](https://github.com/KeeperHub/keeperhub/pull/1106) | `feat: add Superfluid protocol` | 12 | `Philotheephilix:feat/superfluid-protocol` → `staging` |
+| [`KeeperHub/keeperhub#1105`](https://github.com/KeeperHub/keeperhub/pull/1105) | `feat: add Coalition plugin (multi-party on-chain commitments with slashing)` | 18 | `Philotheephilix:feat/KEEP-XXX-coalition-plugin` → `staging` |
 
-Real PR URLs are dropped into the pitch deck (`frontend/app/pitch/page.tsx`, search for `PRBadge`) when the PRs are public.
+Both PRs reference `computepool.vercel.app` as the live dogfooding deployment. Same URLs are wired into the pitch deck PR badges (`frontend/app/pitch/page.tsx`, search for `PRBadge`).

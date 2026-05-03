@@ -10,7 +10,7 @@ ComputePool ships **one product** that satisfies **three sponsor tracks** becaus
 |---|---|---:|---|
 | [`0g/`](0g/) | **0G** | $15,000 | First **CREATE2-deployed verified Superfluid contracts** on 0G Galileo · **pooled-GPU SDK** that lets consumer cards qualify for 0G Compute · TEE-attested orchestrator preserving 0G's signing model · live ERC-7857 **INFT per pool** |
 | [`gensyn-axl/`](gensyn-axl/) | **Gensyn — AXL** | $5,000 | First **production-grade layer-pipelined LLM inference** over AXL · multi-node by construction · prebuilt NVIDIA + CPU images for **one-line deploy** · **Tailscale-native** networking with zero exposed ports |
-| [`keeperhub/`](keeperhub/) | **KeeperHub** | $5,000 | Five workflows that drive the entire payment lifecycle · upstream **Superfluid plugin PR** · upstream **Coagulation plugin PR** for multi-workflow consensus · agents pay autonomously via **x402 + streaming** |
+| [`keeperhub/`](keeperhub/) | **KeeperHub** | $5,000 | Five workflows that drive the entire payment lifecycle · upstream [**Superfluid plugin (#1106)**](https://github.com/KeeperHub/keeperhub/pull/1106) · upstream [**Coalition plugin (#1105)**](https://github.com/KeeperHub/keeperhub/pull/1105) — multi-party on-chain commitments with slashing · agents pay autonomously via **x402 + streaming** |
 
 ## How to evaluate this submission in 5 minutes
 

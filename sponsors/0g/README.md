@@ -17,6 +17,60 @@ ComputePool is not a project that *uses* 0G. It is a project that **extends** 0G
 - Lifecycle driver: [`orchestrator/economics.py`](../../orchestrator/economics.py) — `createPool`, `updateMemberUnits`, `distributeFlow(rate)`, `distributeFlow(rate=0)`, slashing
 - Anyone in the 0G ecosystem can now build per-second payment products on top of these contracts.
 
+#### Deployed contract addresses on 0G Galileo (chainId `16602`)
+
+Explorer: <https://chainscan-galileo.0g.ai>
+
+**Superfluid forwarders** — the public API surface; anyone can call them:
+
+| Contract | Address | Explorer |
+|---|---|---|
+| **GDAv1Forwarder** *(General Distribution — pools + flow)* | `0xfDF1C52BBe39884Bd9fDF2407903ff3a91a25B17` | [↗](https://chainscan-galileo.0g.ai/address/0xfDF1C52BBe39884Bd9fDF2407903ff3a91a25B17) |
+| **CFAv1Forwarder** *(Constant Flow Agreement — sender→receiver streams)* | `0xb3ded3B98a8b586fF50e41EE54E3Aa0f3c41eB72` | [↗](https://chainscan-galileo.0g.ai/address/0xb3ded3B98a8b586fF50e41EE54E3Aa0f3c41eB72) |
+
+**Tokens** — the streamable assets:
+
+| Contract | Address | Notes |
+|---|---|---|
+| **USDC** *(EIP-3009 mock — `transferWithAuthorization` for x402 vouchers)* | [`0xa1B71D35B9B46BA5b8f579B8e5d97C3497678189`](https://chainscan-galileo.0g.ai/address/0xa1B71D35B9B46BA5b8f579B8e5d97C3497678189) | underlying ERC-20 |
+| **USDCx** *(Super Token wrap of USDC — the streamable asset)* | [`0x3A818444F7341bFa7287Be7f58CB86bF12F39Af2`](https://chainscan-galileo.0g.ai/address/0x3A818444F7341bFa7287Be7f58CB86bF12F39Af2) | wrap/unwrap 1:1 against USDC |
+
+**ComputePool contracts** — consumers of Superfluid + the INFT layer:
+
+| Contract | Address | Explorer |
+|---|---|---|
+| `Coalition` *(N-party operator commitments + slashing)* | `0x6647E81040a3E9BF658e107360c638c5DD04d1eF` | [↗](https://chainscan-galileo.0g.ai/address/0x6647E81040a3E9BF658e107360c638c5DD04d1eF) |
+| `PoolINFT` *(ERC-7857 INFT per pool)* | `0xe57192EB63433A5A4f76C9E5F33c3f2a64AeeFd4` | [↗](https://chainscan-galileo.0g.ai/address/0xe57192EB63433A5A4f76C9E5F33c3f2a64AeeFd4) |
+
+**Honest disclosure on the addresses.** The forwarder addresses above are **not** the canonical Superfluid CREATE2 addresses (`0x6DA13Bde…GDA` / `0xcfA132E3…CFA`) used on Base / Optimism / Arbitrum / Polygon / Ethereum mainnet. We deployed under our own deployer with our own salt because the canonical deployer's nonce isn't available on a fresh chain — so the addresses differ but the bytecode and ABI are byte-identical. Any tooling pointed at these addresses behaves exactly like Superfluid on any other chain, and any standard Superfluid client (`@superfluid-finance/sdk-core`, viem, ethers) works without modification.
+
+**Calling them from anywhere:**
+
+```ts
+const GDA_FORWARDER = "0xfDF1C52BBe39884Bd9fDF2407903ff3a91a25B17";
+const CFA_FORWARDER = "0xb3ded3B98a8b586fF50e41EE54E3Aa0f3c41eB72";
+const USDCX         = "0x3A818444F7341bFa7287Be7f58CB86bF12F39Af2";
+
+// Per-second stream from sender → receiver at 0.01 USDCx/s
+await cfaForwarder.write.setFlowrate([USDCX, receiver, 10_000_000_000_000n]);
+
+// Or pool-based distribution: one stream → many receivers, weighted by units
+const pool = await gdaForwarder.write.createPool([USDCX, admin, poolConfig]);
+await gdaForwarder.write.updateMemberUnits([pool, member, units]);
+await gdaForwarder.write.distributeFlow([USDCX, sender, pool, ratePerSec]);
+```
+
+The official Superfluid docs (<https://docs.superfluid.finance>) apply directly — substitute the addresses above when targeting 0G Galileo.
+
+#### Where ComputePool calls these contracts
+
+| Code path | Calls |
+|---|---|
+| [`orchestrator/onchain.py`](../../orchestrator/onchain.py) | `GDAv1Forwarder.createPool`, `updateMemberUnits`, `distributeFlow` via web3.py |
+| [`orchestrator/economics.py`](../../orchestrator/economics.py) | Coalition lifecycle: propose → activate → pool create → stream start/stop → slash |
+| [`keeperhub/compute-coalition-stream-start.workflow.json`](../../keeperhub/compute-coalition-stream-start.workflow.json) | KH workflow that invokes `GDAv1Forwarder.distributeFlow` at the negotiated rate |
+| [`keeperhub/compute-coalition-stream-stop.workflow.json`](../../keeperhub/compute-coalition-stream-stop.workflow.json) | KH workflow that invokes `distributeFlow(rate=0)` to halt the meter |
+
 ### 2. Pooled-GPU SDK — consumer cards qualify for 0G Compute
 
 0G Compute is excellent — but its hardware floor excludes the long tail. **A 4090, a 3090, an M2 Mac aren't admissible.** Our SDK fuses N consumer GPUs into one logical compute target by sharding the model layer-wise across them.
