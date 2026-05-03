@@ -8,6 +8,7 @@ import { Badge, Button } from "@/components/cp/primitives";
 import { useWallet } from "@/lib/use-wallet";
 import { pools as poolsApi, type Pool } from "@/lib/api";
 import { getWalletClient, ZERO_G_GALILEO } from "@/lib/wallet";
+import { useBreakpoint } from "@/lib/use-breakpoint";
 import {
   encodeFunctionData,
   createPublicClient,
@@ -139,7 +140,6 @@ function describeURI(uri: string): { label: string; bytes: number; preview: stri
   return { label: "URI", bytes: 0, preview: uri };
 }
 
-// Layer-split mini-viz: two adjacent bars for entry and exit slices.
 function LayerSplit({ pool }: { pool: Pool }) {
   const T = useT();
   const total = (pool.assignments ?? []).reduce(
@@ -166,7 +166,7 @@ function LayerSplit({ pool }: { pool: Pool }) {
           background: `linear-gradient(90deg, ${T.primaryMid}, ${T.primaryLight})` }}/>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between",
-        fontFamily: FONT_MONO, fontSize: 10, color: T.text2, marginTop: 6 }}>
+        fontFamily: FONT_MONO, fontSize: 10, color: T.text2, marginTop: 6, flexWrap: "wrap", gap: 4 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: 3, background: T.primary }}/>
           entry · {entry.node_id} · L{entry.layers[0]}–{entry.layers[1] - 1}
@@ -235,7 +235,6 @@ function INFTCard({
         e.currentTarget.style.borderColor = T.border;
       }}
     >
-      {/* Animated gradient stripe */}
       <div style={{
         height: 4,
         background: `linear-gradient(90deg, ${T.primary}, ${T.primaryMid}, ${T.primary})`,
@@ -244,9 +243,8 @@ function INFTCard({
       }}/>
 
       <div style={{ padding: "18px 20px 20px" }}>
-        {/* Header — token id + pool name + on-chain status */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{
               fontFamily: FONT_MONO, fontSize: 10, color: T.text3,
               letterSpacing: "0.18em", textTransform: "uppercase",
@@ -255,7 +253,7 @@ function INFTCard({
             </div>
             <div style={{
               fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: T.text1,
-              marginTop: 6, letterSpacing: "-0.01em",
+              marginTop: 6, letterSpacing: "-0.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}>
               {pool.name}
             </div>
@@ -264,7 +262,6 @@ function INFTCard({
             </div>
           </div>
 
-          {/* Big token-id badge with subtle glow */}
           <div style={{
             position: "relative",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -273,6 +270,7 @@ function INFTCard({
             color: "#fff", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 22,
             letterSpacing: "-0.02em",
             boxShadow: `0 0 0 4px ${T.primaryLight}`,
+            flexShrink: 0,
           }}>
             <span style={{
               position: "absolute", inset: -6, borderRadius: 18,
@@ -283,7 +281,6 @@ function INFTCard({
           </div>
         </div>
 
-        {/* Live on-chain pill row */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
           {chain ? (
             <Badge kind="primary" label="On-chain · live"/>
@@ -304,7 +301,6 @@ function INFTCard({
 
         <LayerSplit pool={pool}/>
 
-        {/* On-chain rows */}
         <div style={{
           marginTop: 14, padding: "12px 14px",
           background: T.surfaceWarm, borderRadius: 10,
@@ -312,7 +308,7 @@ function INFTCard({
           display: "grid", gridTemplateColumns: "auto 1fr", rowGap: 6, columnGap: 12,
         }}>
           <span style={{ color: T.text3 }}>Owner</span>
-          <span style={{ color: T.text1 }}>
+          <span style={{ color: T.text1, overflow: "hidden", textOverflow: "ellipsis" }}>
             <a href={`${EXPLORER}/address/${chain?.owner ?? ""}`} target="_blank" rel="noopener"
               style={{ color: T.text1, textDecoration: "none", borderBottom: `1px dashed ${T.border}` }}>
               {shortAddr(chain?.owner ?? "—", 8, 6)}
@@ -327,13 +323,12 @@ function INFTCard({
             {chain ? `${chain.sealedKeyLen} bytes (ECIES)` : "—"}
           </span>
           <span style={{ color: T.text3 }}>Metadata</span>
-          <span style={{ color: T.text1 }}>
+          <span style={{ color: T.text1, overflow: "hidden", textOverflow: "ellipsis" }}>
             {uri.bytes ? `${uri.bytes} B encrypted` : uri.preview}
           </span>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
           <Button kind="primary"
             onClick={() => onAuthorize(pool)}
             disabled={!callerWallet || working || !isOwner}>
@@ -351,6 +346,7 @@ function INFTCard({
 
 export default function WalletPage() {
   const T = useT();
+  const isMobile = useBreakpoint();
   const { state: w, connect, busy } = useWallet();
   const [pools, setPools] = React.useState<Pool[] | null>(null);
   const [loadErr, setLoadErr] = React.useState<string | null>(null);
@@ -362,8 +358,6 @@ export default function WalletPage() {
   React.useEffect(() => {
     let cancel = false;
     if (!apiKey) {
-      // No auth — render the sign-in prompt path. Use a microtask so the state
-      // update happens outside the synchronous render-of-effect window.
       void Promise.resolve().then(() => { if (!cancel) setPools([]); });
       return () => { cancel = true; };
     }
@@ -415,21 +409,22 @@ export default function WalletPage() {
       `}</style>
       <TopNav active="wallet"/>
 
-      <section style={{ padding: "48px 64px 24px", maxWidth: 1280, margin: "0 auto" }}>
-        {/* Hero — contract details */}
+      <section style={{ padding: isMobile ? "24px 16px 16px" : "48px 64px 24px", maxWidth: 1280, margin: "0 auto" }}>
         <div style={{
-          padding: "28px 32px",
+          padding: isMobile ? "20px 16px" : "28px 32px",
           borderRadius: 20,
           border: `1px solid ${T.border}`,
           background: `linear-gradient(135deg, ${T.surface} 0%, ${T.surfaceWarm} 100%)`,
-          display: "grid", gridTemplateColumns: "1fr auto", gap: 24, alignItems: "center",
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
+          gap: 20, alignItems: "center",
         }}>
           <div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: T.primary,
               letterSpacing: "0.18em", textTransform: "uppercase" }}>
               Pool INFTs · ERC-7857
             </div>
-            <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 36, color: T.text1,
+            <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 26 : 36, color: T.text1,
               margin: "10px 0 8px", letterSpacing: "-0.02em" }}>
               Your tokenized inference pools
             </h1>
@@ -449,33 +444,35 @@ export default function WalletPage() {
               </div>
             )}
           </div>
-          <div style={{
-            position: "relative",
-            width: 120, height: 120, borderRadius: 22,
-            background: `linear-gradient(135deg, ${T.primary}, ${T.primaryDeep})`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: `0 8px 24px ${T.primary}33`,
-          }}>
+          {/* Badge hidden on mobile to avoid squeezing text */}
+          {!isMobile && (
             <div style={{
-              position: "absolute", inset: -10, borderRadius: 28,
-              background: `radial-gradient(circle, ${T.primary}33, transparent 70%)`,
-              animation: "cp-pulse 2.4s ease-in-out infinite",
-            }}/>
-            <span style={{
-              position: "relative", color: "#fff", fontFamily: FONT_DISPLAY,
-              fontSize: 44, fontWeight: 700, letterSpacing: "-0.04em",
-            }}>{tokenized.length}</span>
-            <span style={{
-              position: "absolute", bottom: 14,
-              fontFamily: FONT_MONO, fontSize: 10, color: "rgba(255,255,255,0.85)",
-              letterSpacing: "0.18em", textTransform: "uppercase",
-            }}>INFTs</span>
-          </div>
+              position: "relative",
+              width: 120, height: 120, borderRadius: 22,
+              background: `linear-gradient(135deg, ${T.primary}, ${T.primaryDeep})`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: `0 8px 24px ${T.primary}33`,
+            }}>
+              <div style={{
+                position: "absolute", inset: -10, borderRadius: 28,
+                background: `radial-gradient(circle, ${T.primary}33, transparent 70%)`,
+                animation: "cp-pulse 2.4s ease-in-out infinite",
+              }}/>
+              <span style={{
+                position: "relative", color: "#fff", fontFamily: FONT_DISPLAY,
+                fontSize: 44, fontWeight: 700, letterSpacing: "-0.04em",
+              }}>{tokenized.length}</span>
+              <span style={{
+                position: "absolute", bottom: 14,
+                fontFamily: FONT_MONO, fontSize: 10, color: "rgba(255,255,255,0.85)",
+                letterSpacing: "0.18em", textTransform: "uppercase",
+              }}>INFTs</span>
+            </div>
+          )}
         </div>
       </section>
 
-      <section style={{ padding: "0 64px 64px", maxWidth: 1280, margin: "0 auto" }}>
-        {/* Setup hints / errors */}
+      <section style={{ padding: isMobile ? "0 16px 48px" : "0 64px 64px", maxWidth: 1280, margin: "0 auto" }}>
         {!INFT_CONTRACT_ADDR && (
           <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: 12,
             background: T.amberLight, border: `1px solid ${T.amber}55`, color: T.text1,
@@ -501,11 +498,12 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* Wallet connect prompt */}
         {!w.address && (
           <div style={{ marginBottom: 16, padding: 18, borderRadius: 12,
             background: T.surface, border: `1px dashed ${T.borderStrong}`,
-            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+            display: "flex", alignItems: isMobile ? "flex-start" : "center",
+            flexDirection: isMobile ? "column" : "row",
+            justifyContent: "space-between", gap: 16 }}>
             <div>
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, color: T.text1, fontWeight: 600 }}>
                 Connect your wallet to authorize renters
@@ -514,13 +512,12 @@ export default function WalletPage() {
                 Authorize calls write to PoolINFT on 0G Galileo and require a connected wallet.
               </div>
             </div>
-            <Button kind="primary" onClick={connect} disabled={busy}>
+            <Button kind="primary" onClick={connect} disabled={busy} style={{ flexShrink: 0 }}>
               {busy ? "Connecting…" : "Connect wallet"}
             </Button>
           </div>
         )}
 
-        {/* Auth gate — must be logged in to fetch pools */}
         {!apiKey && (
           <div style={{ padding: 32, borderRadius: 16, background: T.surface,
             border: `1px solid ${T.border}`, textAlign: "center" }}>
@@ -539,9 +536,8 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* Loading state */}
         {apiKey && pools === null && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(380px, 1fr))", gap: 18 }}>
             {[0, 1].map(i => (
               <div key={i} style={{
                 height: 320, borderRadius: 18, background: T.surface,
@@ -552,7 +548,6 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* Empty state */}
         {apiKey && pools !== null && tokenized.length === 0 && (
           <div style={{ padding: 32, borderRadius: 16, background: T.surface,
             border: `1px solid ${T.border}`, textAlign: "center" }}>
@@ -565,9 +560,8 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* Cards grid */}
         {apiKey && tokenized.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(380px, 1fr))", gap: 18 }}>
             {tokenized.map(p => (
               <INFTCard
                 key={p.name}

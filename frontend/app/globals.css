@@ -22,6 +22,44 @@ button { font-family: inherit; }
   animation: cp-flow-dash 2s linear infinite;
 }
 
+/* Landing — "How it works": Tamizh-style row where hovered column flex-grows */
+.cp-howit-works-row {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.cp-howit-works-expand {
+  flex: 1 1 0;
+  min-width: 0;
+  cursor: default;
+  transition: flex 0.3s ease-out;
+  border-radius: 12px;
+}
+
+@media (min-width: 768px) {
+  .cp-howit-works-expand {
+    min-width: 140px;
+  }
+}
+
+.cp-howit-works-expand:hover,
+.cp-howit-works-expand:focus-within {
+  flex: 2 1 0;
+}
+
+.cp-howit-works-expand:focus-visible {
+  outline: 2px solid var(--cp-primary, #4338ca);
+  outline-offset: 2px;
+}
+
+@media (hover: none) {
+  .cp-howit-works-expand:hover {
+    flex: 1 1 0;
+  }
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
