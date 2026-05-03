@@ -1,5 +1,8 @@
 # ComputePool
 
+<img width="2072" height="1023" alt="image" src="https://github.com/user-attachments/assets/1de84110-acd3-4677-a234-f6fbd0bf1145" />
+
+
 > **Production LLM inference on the consumer GPUs you already own — at near-zero latency overhead vs. a single big GPU.**
 > A 70B model needs ~140 GB of VRAM. An RTX 4090 has 24. ComputePool shards a model layer-wise across two (or more) consumer cards, streams hidden states peer-to-peer over [Gensyn AXL](https://github.com/gensyn-ai/axl), settles via x402 + Superfluid on **0G Galileo testnet**, and orchestrates everything through KeeperHub workflows.
 >
@@ -32,17 +35,8 @@ Three deep-dive READMEs — start here:
 
 A single GPU can't fit a real model. We turn N small GPUs into one virtual one:
 
-```
-                                   x402 voucher        Superfluid stream (USDCx/s)
-                                       │                      │
-   prompt  ───►  orchestrator  ───►  ┌─┴───────────┐      ┌───┴──────────┐
-                 (FastAPI,           │ entry shard │ AXL  │ exit shard   │
-                  TEE-attested)      │ layers 0..M │ ◄══► │ layers M..N  │
-                                     │ node-a      │      │ node-b       │
-                                     └─────────────┘      └──────────────┘
-                                       hidden states ───►
-                                       ◄─── sampled token
-```
+<img width="2104" height="1132" alt="image" src="https://github.com/user-attachments/assets/d68a7f9d-0b75-4848-ad62-e48078edae7e" />
+
 
 - **Sharding:** [`worker/model.py`](worker/model.py) loads only the assigned layer slice from a HuggingFace model. Entry holds `embed + layers[0:mid]`, exit holds `layers[mid:N] + lm_head`.
 - **P2P transport:** [`worker/axl_client.py`](worker/axl_client.py) + [`worker/framing.py`](worker/framing.py) carry hidden-state tensors and sampled tokens across [Gensyn AXL](https://github.com/gensyn-ai/axl) frames.
