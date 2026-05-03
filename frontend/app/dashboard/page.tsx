@@ -9,9 +9,11 @@ import { Stat, EventRow, Sparkline, NodeRow } from "@/components/cp/dashboard-bi
 import { NetworkGraph } from "@/components/cp/network-graph";
 import { useApiState } from "@/lib/use-api-state";
 import { listJobs, totalsByWindow, ago } from "@/lib/job-history";
+import { useBreakpoint } from "@/lib/use-breakpoint";
 
 export default function DashOverview() {
   const T = useT();
+  const isMobile = useBreakpoint();
   const router = useRouter();
   const { data, authed, loading, error } = useApiState({ pollMs: 5_000 });
   const [jobs, setJobs] = React.useState(() => (typeof window === "undefined" ? [] : listJobs()));
@@ -52,7 +54,7 @@ export default function DashOverview() {
 
   if (!authed) {
     return (
-      <Card padding={48} style={{ maxWidth: 560, margin: "120px auto", textAlign: "center" }}>
+      <Card padding={isMobile ? 28 : 48} style={{ maxWidth: 560, margin: isMobile ? "40px auto" : "120px auto", textAlign: "center" }}>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: T.text1 }}>
           Connect to view your network
         </div>
@@ -66,9 +68,16 @@ export default function DashOverview() {
 
   return (
     <div>
-      <header style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+      <header style={{
+        marginBottom: 24,
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        justifyContent: "space-between",
+        alignItems: isMobile ? "flex-start" : "flex-end",
+        gap: isMobile ? 14 : 0,
+      }}>
         <div>
-          <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 32, color: T.text1, letterSpacing: "-0.02em", margin: 0 }}>
+          <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: isMobile ? 24 : 32, color: T.text1, letterSpacing: "-0.02em", margin: 0 }}>
             Network overview
           </h1>
           <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text2, marginTop: 4 }}>
@@ -80,14 +89,17 @@ export default function DashOverview() {
         <Button kind="primary" onClick={() => router.push("/infer")}>+ New inference</Button>
       </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.32fr 1fr", gap: 20 }}>
-        <Card padding={0} style={{ overflow: "hidden" }}>
-          <div style={{ padding: "18px 22px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 14, fontWeight: 500, color: T.text2, textTransform: "uppercase", letterSpacing: "0.04em" }}>Network</span>
-            <Badge kind="primary" label={`${loadedPools.length} pool${loadedPools.length !== 1 ? "s" : ""} loaded`}/>
-          </div>
-          <NetworkGraph width={760} height={520} nodeCount={Math.max(nodes.length || 7, 3)} breachId={null} breachAt={null}/>
-        </Card>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.32fr 1fr", gap: 20 }}>
+        {/* NetworkGraph: hidden on mobile (760px canvas won't fit) */}
+        {!isMobile && (
+          <Card padding={0} style={{ overflow: "hidden" }}>
+            <div style={{ padding: "18px 22px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: FONT_DISPLAY, fontSize: 14, fontWeight: 500, color: T.text2, textTransform: "uppercase", letterSpacing: "0.04em" }}>Network</span>
+              <Badge kind="primary" label={`${loadedPools.length} pool${loadedPools.length !== 1 ? "s" : ""} loaded`}/>
+            </div>
+            <NetworkGraph width={760} height={520} nodeCount={Math.max(nodes.length || 7, 3)} breachId={null} breachAt={null}/>
+          </Card>
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -113,7 +125,7 @@ export default function DashOverview() {
               const exit  = (p.assignments ?? []).find((a) => a.role === "exit");
               return (
                 <div key={p.name} style={{ padding: "16px 22px", borderTop: `1px solid ${T.border}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <span style={{ fontFamily: FONT_DISPLAY, fontSize: 15, fontWeight: 600, color: T.text1 }}>{p.model ?? "—"}</span>
                       <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: T.text3, marginLeft: 10 }}>· {p.name}</span>
@@ -134,7 +146,7 @@ export default function DashOverview() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.32fr 1fr", gap: 20, marginTop: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.32fr 1fr", gap: 20, marginTop: 20 }}>
         <Card padding={0} style={{ overflow: "hidden" }}>
           <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 500, color: T.text2, textTransform: "uppercase", letterSpacing: "0.04em" }}>Spend, last 24h</span>

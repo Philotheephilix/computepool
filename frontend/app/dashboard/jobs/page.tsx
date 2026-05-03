@@ -4,12 +4,14 @@ import * as React from "react";
 import { useT, FONT_DISPLAY, FONT_BODY, FONT_MONO } from "@/components/cp/theme";
 import { Badge, Button, Card } from "@/components/cp/primitives";
 import { listJobs, ago, clearJobs, type JobRecord } from "@/lib/job-history";
+import { useBreakpoint } from "@/lib/use-breakpoint";
 
 const COLS = "1.4fr 1.2fr 1fr 0.7fr 0.7fr 0.7fr 0.7fr 0.8fr";
 const EXPLORER = "https://chainscan-galileo.0g.ai/tx/";
 
 export default function DashJobs() {
   const T = useT();
+  const isMobile = useBreakpoint();
   const [jobs, setJobs] = React.useState<JobRecord[]>([]);
   const [open, setOpen] = React.useState<JobRecord | null>(null);
 
@@ -22,7 +24,7 @@ export default function DashJobs() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 32, color: T.text1, letterSpacing: "-0.02em", margin: 0 }}>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: isMobile ? 24 : 32, color: T.text1, letterSpacing: "-0.02em", margin: 0 }}>
           Jobs
         </h1>
         {jobs.length > 0 && (
@@ -39,40 +41,63 @@ export default function DashJobs() {
       </div>
 
       <Card padding={0} style={{ overflow: "hidden" }}>
-        <div style={{
-          display: "grid", gridTemplateColumns: COLS, padding: "14px 22px",
-          borderBottom: `1px solid ${T.border}`,
-          fontFamily: FONT_BODY, fontSize: 12, color: T.text3, fontWeight: 500,
-          textTransform: "uppercase", letterSpacing: "0.04em",
-        }}>
-          <span>Job</span><span>Model</span><span>Pool</span><span>Duration</span>
-          <span>Cost</span><span>Tokens</span><span>Status</span><span>Time</span>
-        </div>
+        {/* Desktop: column header */}
+        {!isMobile && (
+          <div style={{
+            display: "grid", gridTemplateColumns: COLS, padding: "14px 22px",
+            borderBottom: `1px solid ${T.border}`,
+            fontFamily: FONT_BODY, fontSize: 12, color: T.text3, fontWeight: 500,
+            textTransform: "uppercase", letterSpacing: "0.04em",
+          }}>
+            <span>Job</span><span>Model</span><span>Pool</span><span>Duration</span>
+            <span>Cost</span><span>Tokens</span><span>Status</span><span>Time</span>
+          </div>
+        )}
+
         {jobs.length === 0 ? (
           <div style={{ padding: 28, fontFamily: FONT_BODY, fontSize: 13, color: T.text3, textAlign: "center" }}>
             No jobs yet — run an inference at <a href="/infer" style={{ color: T.primary }}>/infer</a>.
           </div>
         ) : jobs.map((j) => (
-          <div key={j.request_id} onClick={() => setOpen(j)}
-            style={{
-              display: "grid", gridTemplateColumns: COLS, padding: "14px 22px",
-              borderBottom: `1px solid ${T.border}`, alignItems: "center", cursor: "pointer",
-            }}>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text1 }}>
-              {j.request_id.slice(0, 8)}…{j.request_id.slice(-6)}
-            </span>
-            <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: T.text1 }}>{j.model}</span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text2 }}>{j.pool}</span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text2 }}>
-              {j.duration_s != null ? `${j.duration_s.toFixed(1)}s` : "—"}
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text1 }}>
-              {j.cost_usdc != null ? j.cost_usdc.toFixed(4) : "—"}
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text2 }}>{j.tokens ?? "—"}</span>
-            <Badge kind={j.status === "complete" ? "primary" : "red"} label={j.status}/>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: T.text3 }}>{ago(j.ts)}</span>
-          </div>
+          isMobile ? (
+            <div key={j.request_id} onClick={() => setOpen(j)}
+              style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}`, cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text1, fontWeight: 500 }}>{j.model}</span>
+                <Badge kind={j.status === "complete" ? "primary" : "red"} label={j.status}/>
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text2, marginBottom: 4 }}>
+                {j.pool} · {j.tokens ?? "—"} tok
+                {j.cost_usdc != null ? ` · ${j.cost_usdc.toFixed(4)} USDC` : ""}
+                {j.duration_s != null ? ` · ${j.duration_s.toFixed(1)}s` : ""}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: FONT_MONO, fontSize: 11, color: T.text3 }}>
+                <span>{j.request_id.slice(0, 8)}…</span>
+                <span>{ago(j.ts)}</span>
+              </div>
+            </div>
+          ) : (
+            <div key={j.request_id} onClick={() => setOpen(j)}
+              style={{
+                display: "grid", gridTemplateColumns: COLS, padding: "14px 22px",
+                borderBottom: `1px solid ${T.border}`, alignItems: "center", cursor: "pointer",
+              }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text1 }}>
+                {j.request_id.slice(0, 8)}…{j.request_id.slice(-6)}
+              </span>
+              <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: T.text1 }}>{j.model}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text2 }}>{j.pool}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text2 }}>
+                {j.duration_s != null ? `${j.duration_s.toFixed(1)}s` : "—"}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text1 }}>
+                {j.cost_usdc != null ? j.cost_usdc.toFixed(4) : "—"}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text2 }}>{j.tokens ?? "—"}</span>
+              <Badge kind={j.status === "complete" ? "primary" : "red"} label={j.status}/>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: T.text3 }}>{ago(j.ts)}</span>
+            </div>
+          )
         ))}
       </Card>
 
@@ -83,23 +108,38 @@ export default function DashJobs() {
 
 function JobDetail({ j, onClose }: { j: JobRecord; onClose: () => void }) {
   const T = useT();
+  const isMobile = useBreakpoint();
   return (
     <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 90,
+        display: "flex",
+        alignItems: isMobile ? "flex-end" : "center",
+        justifyContent: "center",
+        padding: isMobile ? 0 : 32,
+      }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ width: 760, maxWidth: "100%", background: T.surface, borderRadius: 16, overflow: "hidden", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "20px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600, color: T.text1 }}>
+        style={{
+          width: isMobile ? "100%" : 760,
+          maxWidth: "100%",
+          background: T.surface,
+          borderRadius: isMobile ? "16px 16px 0 0" : 16,
+          overflow: "hidden",
+          maxHeight: isMobile ? "88vh" : "90vh",
+          display: "flex", flexDirection: "column",
+        }}>
+        <div style={{ padding: isMobile ? "16px 20px" : "20px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ minWidth: 0, marginRight: 12 }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 16 : 18, fontWeight: 600, color: T.text1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {j.model} · {j.pool}
             </div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text3, marginTop: 4 }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: T.text3, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {j.request_id}
             </div>
           </div>
-          <button onClick={onClose} style={{ border: "none", background: "transparent", color: T.text3, fontSize: 22, cursor: "pointer" }}>×</button>
+          <button onClick={onClose} style={{ border: "none", background: "transparent", color: T.text3, fontSize: 22, cursor: "pointer", flexShrink: 0 }}>×</button>
         </div>
-        <div style={{ padding: 24, overflow: "auto", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ padding: isMobile ? 16 : 24, overflow: "auto", display: "flex", flexDirection: "column", gap: 18 }}>
           <Section title="Prompt"><Pre>{j.prompt}</Pre></Section>
           {j.output && <Section title="Output"><Pre>{j.output}</Pre></Section>}
           {j.error && <Section title="Error"><Pre>{j.error}</Pre></Section>}
@@ -142,14 +182,14 @@ function Pre({ children }: { children: React.ReactNode }) {
 function Row({ k, v, link }: { k: string; v: string; link?: string }) {
   const T = useT();
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-      <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: T.text2 }}>{k}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", gap: 8 }}>
+      <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: T.text2, flexShrink: 0 }}>{k}</span>
       {link ? (
-        <a href={link} target="_blank" rel="noreferrer" style={{ fontFamily: FONT_MONO, fontSize: 13, color: T.text1, textDecoration: "none" }}>
+        <a href={link} target="_blank" rel="noreferrer" style={{ fontFamily: FONT_MONO, fontSize: 13, color: T.text1, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {v} <span style={{ color: T.text3 }}>↗</span>
         </a>
       ) : (
-        <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: T.text1 }}>{v}</span>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: T.text1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { Badge, Button, Card } from "@/components/cp/primitives";
 import { useApiState } from "@/lib/use-api-state";
 import { nodes as nodesApi, type Node } from "@/lib/api";
 import { truncHex } from "@/components/cp/primitives";
+import { useBreakpoint } from "@/lib/use-breakpoint";
 
 function statusKind(s: Node["status"]): "primary" | "amber" | "purple" | "offline" {
   if (s === "loaded") return "primary";
@@ -16,6 +17,7 @@ function statusKind(s: Node["status"]): "primary" | "amber" | "purple" | "offlin
 
 export default function DashNodes() {
   const T = useT();
+  const isMobile = useBreakpoint();
   const { data, authed, refresh } = useApiState({ pollMs: 5_000 });
   const [busy, setBusy] = React.useState<string | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function DashNodes() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 32, color: T.text1, letterSpacing: "-0.02em", margin: 0 }}>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: isMobile ? 24 : 32, color: T.text1, letterSpacing: "-0.02em", margin: 0 }}>
           Nodes
         </h1>
         <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text3 }}>{nodes.length} registered</span>
@@ -52,12 +54,12 @@ export default function DashNodes() {
           </div>
         </Card>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16 }}>
           {nodes.map((n) => (
             <Card key={n.node_id} padding={20}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div>
-                  <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600, color: T.text1 }}>{n.node_id}</div>
+                <div style={{ minWidth: 0, marginRight: 12 }}>
+                  <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600, color: T.text1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.node_id}</div>
                   <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.text3, marginTop: 2 }}>
                     pool: {n.pool_name ?? "—"}
                   </div>
@@ -90,8 +92,8 @@ export default function DashNodes() {
 function KV({ k, v }: { k: string; v: string }) {
   const T = useT();
   return (
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span style={{ color: T.text3 }}>{k}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+      <span style={{ color: T.text3, flexShrink: 0 }}>{k}</span>
       <span style={{ color: T.text1, textAlign: "right", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
     </div>
   );

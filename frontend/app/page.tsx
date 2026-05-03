@@ -121,17 +121,55 @@ export default function LandingPage() {
             Three steps. Zero trust required.
           </h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 16 : 24 }}>
-          {[
-            { n: "01", t: "Choose a model", d: "Pick from open-source LLMs hosted across our operator pools. Each pool exposes its node count, price, and latency." },
-            { n: "02", t: "Set your budget", d: "You commit USDCx upfront. A Superfluid stream opens to the operators the moment inference begins." },
-            { n: "03", t: "Watch it compute", d: "Tokens stream back in real time. If any node falters, KeeperHub slashes them on-chain and your refund happens automatically." },
-          ].map((s) => (
-            <Card key={s.n} padding={isMobile ? 24 : 32}>
+        <div
+          className={isMobile ? undefined : "cp-howit-works-row"}
+          style={isMobile ? { display: "grid", gridTemplateColumns: "1fr", gap: 16 } : undefined}
+        >
+          {([
+            { n: "01", t: "Choose a model", d: "Pick from open-source LLMs hosted across our operator pools. Each pool exposes its node count, price, and latency.", img: { src: "/step-1-how-it-works.png", alt: "Step 1: choose a model" } },
+            { n: "02", t: "Set your budget", d: "You commit USDCx upfront. A Superfluid stream opens to the operators the moment inference begins.", img: { src: "/step-2-how-it-works.png", alt: "Step 2: set your budget" } },
+            { n: "03", t: "Watch it compute", d: "Tokens stream back in real time. If any node falters, KeeperHub slashes them on-chain and your refund happens automatically.", img: { src: "/step-3-how-it-works.png", alt: "Step 3: watch it compute" } },
+          ] as const).map((s) => (
+            <div
+              key={s.n}
+              className={isMobile ? undefined : "cp-howit-works-expand"}
+              tabIndex={isMobile ? undefined : 0}
+            >
+            <Card padding={isMobile ? 24 : 32} style={isMobile ? undefined : { height: "100%" }}>
+              <div style={{
+                marginBottom: 20,
+                borderRadius: 10,
+                overflow: "hidden",
+                border: `1px solid ${T.border}`,
+                background: T.surface,
+                aspectRatio: "16 / 10",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {"img" in s && s.img ? (
+                  <img
+                    src={s.img.src}
+                    alt={s.img.alt}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                ) : (
+                  <div style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: T.text3,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}>
+                    Illustration placeholder
+                  </div>
+                )}
+              </div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: T.primary, fontWeight: 500 }}>{s.n}</div>
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 20 : 24, fontWeight: 600, color: T.text1, marginTop: 14, letterSpacing: "-0.01em" }}>{s.t}</div>
               <div style={{ fontFamily: FONT_BODY, fontSize: 15, color: T.text2, marginTop: 12, lineHeight: 1.55 }}>{s.d}</div>
             </Card>
+            </div>
           ))}
         </div>
       </section>

@@ -4,6 +4,8 @@ import * as React from "react";
 import { useT, FONT_DISPLAY, FONT_BODY, FONT_MONO } from "@/components/cp/theme";
 import { Badge, Button, Card } from "@/components/cp/primitives";
 import { Stat } from "@/components/cp/dashboard-bits";
+import { listJobs, totalsByWindow, ago, type JobRecord } from "@/lib/job-history";
+import { useBreakpoint } from "@/lib/use-breakpoint";
 import { listJobs, totalsByWindow, ago, clearJobs, type JobRecord } from "@/lib/job-history";
 
 const EXPLORER = "https://chainscan-galileo.0g.ai/tx/";
@@ -23,6 +25,7 @@ function jobStatus(j: JobRecord): { label: string; kind: "primary" | "amber" | "
 
 export default function DashPayments() {
   const T = useT();
+  const isMobile = useBreakpoint();
   const [jobs, setJobs] = React.useState<JobRecord[]>([]);
   const [showAll, setShowAll] = React.useState(true);
 
@@ -38,7 +41,6 @@ export default function DashPayments() {
   const settled = jobs.filter((j) => j.settle_tx);
   const visible = showAll ? jobs : settled;
 
-  // 24h spend chart bucketed hourly
   const buckets = React.useMemo(() => {
     // eslint-disable-next-line react-hooks/purity -- bucketing needs current time; recomputed when jobs change
     const now = Date.now();
@@ -63,6 +65,9 @@ export default function DashPayments() {
 
   return (
     <div>
+      <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: isMobile ? 24 : 32, color: T.text1, letterSpacing: "-0.02em", margin: "0 0 24px" }}>
+        Payments
+      </h1>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
         <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 32, color: T.text1, letterSpacing: "-0.02em", margin: 0 }}>
           Payments
@@ -83,14 +88,14 @@ export default function DashPayments() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 16, marginBottom: 24 }}>
         <Stat label="Today"     value={`${totals.today.toFixed(4)} USDC`}/>
         <Stat label="7 days"    value={`${totals.week.toFixed(4)} USDC`}/>
         <Stat label="30 days"   value={`${totals.month.toFixed(4)} USDC`}/>
         <Stat label="All time"  value={`${totals.all.toFixed(4)} USDC`}/>
       </div>
 
-      <Card padding={32}>
+      <Card padding={isMobile ? 20 : 32}>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 500, color: T.text2, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
           Hourly spend, last 24h
         </div>
