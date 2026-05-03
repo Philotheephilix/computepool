@@ -28,6 +28,7 @@ from .auth import (
     verify_password,
 )
 from .api.attestation import build_router as build_attestation_router
+from .api.faucet import build_router as build_faucet_router
 from .api.infer import build_router as build_infer_router
 from .api.openai_compat import build_router as build_openai_compat_router
 from .chain import Chain
@@ -84,6 +85,10 @@ MODEL_LAYERS: dict[str, int] = {
     "Qwen/Qwen2.5-1.5B-Instruct": 28,
     "Qwen/Qwen2.5-3B-Instruct": 36,
     "Qwen/Qwen3-4B-Instruct-2507": 36,
+    # Phi family (Microsoft) — Apache-2.0/MIT, no gating.
+    "microsoft/Phi-3-mini-4k-instruct": 32,
+    # SmolLM2 family (HuggingFaceTB) — Apache-2.0, no gating.
+    "HuggingFaceTB/SmolLM2-1.7B-Instruct": 24,
     # Gated repos — require HUGGING_FACE_HUB_TOKEN with granted access on the
     # worker container; load() will 401 with GatedRepoError otherwise.
     "meta-llama/Llama-3.2-1B": 16,
@@ -225,6 +230,12 @@ async def lifespan(app: FastAPI):
         _tee_signer = TEESigner.from_keyfile(_tee_settings.tee_signer_key_path)
     app.state.tee_signer = _tee_signer
     app.include_router(build_attestation_router(_tee_signer))
+
+    # Testnet USDC faucet — auto-mints the EIP-3009 mock USDC at
+    # ``settings.usdc_address`` to a user-supplied wallet so a 402 challenge
+    # from /pools/{name}/infer can resolve without manual funding. Owner-gated
+    # on-chain (we sign with FAUCET_PRIVATE_KEY or, fallback, ORCHESTRATOR_PRIVATE_KEY).
+    app.include_router(build_faucet_router())
 
     # INFT client wiring — only if contract address + oracle key are configured.
     if _tee_settings.inft_contract_addr and _tee_settings.inft_oracle_private_key:

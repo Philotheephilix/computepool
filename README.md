@@ -12,8 +12,19 @@
 | **Demo** | `make build && make up` → <http://localhost:8000> |
 | **Pitch deck** | `frontend/app/pitch/page.tsx` (also live at `/pitch`) |
 | **End-to-end script** | `scripts/e2e_demo.py` |
-| **Sponsor write-ups** | [`sponsors/`](sponsors/) — one folder per track |
-| **Prize tracks** | [`prizes.md`](prizes.md) — submission summary across 0G, Gensyn (AXL), KeeperHub |
+
+---
+
+## Sponsor judging packets
+
+Three deep-dive READMEs — start here:
+
+- **0G** ($15,000) — [`sponsors/0g/README.md`](sponsors/0g/README.md)
+  › Pooled-GPU SDK behind a TEE-attested orchestrator · Superfluid live on Galileo (chainId 16602) · ERC-7857 PoolINFT as access primitive
+- **Gensyn — AXL** ($5,000) — [`sponsors/gensyn-axl/README.md`](sponsors/gensyn-axl/README.md)
+  › First production layer-pipelined LLM inference over AXL · prebuilt NVIDIA + CPU images with the AXL binary inside · native Tailscale in the same compose stack
+- **KeeperHub** ($5,000) — [`sponsors/keeperhub/README.md`](sponsors/keeperhub/README.md)
+  › Two upstream PRs (#1106 Superfluid plugin, #1105 Coalition plugin) · five workflows drive the full x402 + Superfluid payment lifecycle
 
 ---
 

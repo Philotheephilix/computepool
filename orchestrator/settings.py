@@ -44,6 +44,15 @@ class Settings(BaseSettings):
     # economics.py (look for the TODO(KH-issue) markers).
     orchestrator_private_key: str = Field(..., pattern=r"^0x[0-9a-fA-F]{64}$")
 
+    # Faucet wallet — owner of the EIP-3009 mock USDC at usdc_address. When
+    # the frontend hits a 402 challenge, the orchestrator mints a small amount
+    # of USDC to the user's wallet so the demo flow doesn't require manual
+    # funding. Optional: when unset, the faucet falls back to
+    # `orchestrator_private_key`. The dummy 0x...01 placeholder is rejected
+    # at call time so live deployments can keep that placeholder for the
+    # other on-chain calls until a real key is provisioned.
+    faucet_private_key: str | None = None
+
     # x402
     x402_facilitator_url: str = "http://facilitator:4021"
     x402_default_price_per_token_usdc_micro: int = 100

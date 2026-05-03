@@ -78,6 +78,8 @@ Explorer: <https://chainscan-galileo.0g.ai>
 | **USDC** *(EIP-3009 mock for x402 vouchers)* | [`0xa1B71D35B9B46BA5b8f579B8e5d97C3497678189`](https://chainscan-galileo.0g.ai/address/0xa1B71D35B9B46BA5b8f579B8e5d97C3497678189) |
 | **USDCx** *(Super Token wrap of USDC)* | [`0x3A818444F7341bFa7287Be7f58CB86bF12F39Af2`](https://chainscan-galileo.0g.ai/address/0x3A818444F7341bFa7287Be7f58CB86bF12F39Af2) |
 
+**Auto-funding faucet.** The EIP-3009 mock USDC is owner-gated, so demo users would otherwise have to chase a faucet before signing an x402 voucher. The orchestrator exposes [`POST /faucet/usdc-mint`](../../orchestrator/api/faucet.py) which signs `mint(wallet, amount)` with the contract's owner key (read from `FAUCET_PRIVATE_KEY`, falling back to `ORCHESTRATOR_PRIVATE_KEY`) and broadcasts directly via web3.py. The frontend calls it from `app/infer/review/page.tsx` right after fetching the 402 challenge and before signing — so a Vercel visitor with an empty wallet on 0G Galileo can run the full inference flow end-to-end without leaving the page. There is also a `GET /faucet/usdc-balance?wallet=…` companion for skip-if-funded checks.
+
 **ComputePool contracts:**
 
 | Contract | Address |

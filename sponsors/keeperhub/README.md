@@ -1,5 +1,7 @@
 # KeeperHub — sponsor judging packet
 
+> **Builder Feedback Bounty submission:** [`feedback.md`](./feedback.md) — covers UX friction, reproducible bugs, documentation gaps, and feature requests (with two we shipped as upstream PRs).
+
 > **TL;DR.** Two upstream PRs against `KeeperHub/keeperhub:staging`, plus the first KeeperHub product wiring **x402 vouchers + Superfluid streams** as a single payment primitive. KeeperHub isn't bolted on — pull it out and the product collapses.
 
 ---
@@ -35,15 +37,17 @@ We did. The orchestrator runs the bond:
 
 > An agent in any framework can `POST /v1/chat/completions` with one signed x402 voucher, and the **entire downstream payment lifecycle — including continuous per-second payouts — runs through KeeperHub workflows**. This is the future shape of the agent economy; we shipped the first one.
 
-Five KH workflows drive the full lifecycle:
+Five KH workflows drive the full lifecycle, sorted by complexity (most multi-step on top):
 
-| Workflow | Action |
-|---|---|
-| [`compute-coalition-propose.workflow.json`](../../keeperhub/compute-coalition-propose.workflow.json) | `Coalition.propose` → POST `coalition_proposed` |
-| [`compute-coalition-activate-and-pool.workflow.json`](../../keeperhub/compute-coalition-activate-and-pool.workflow.json) | `Coalition.activate` → `GDA.createPool` → `updateMemberUnits` ×2 → POST `payment_pool_ready` |
-| [`compute-coalition-stream-start.workflow.json`](../../keeperhub/compute-coalition-stream-start.workflow.json) | `GDA.distributeFlow(rate)` → POST `stream_started` |
-| [`compute-coalition-stream-stop.workflow.json`](../../keeperhub/compute-coalition-stream-stop.workflow.json) | `GDA.distributeFlow(0)` → POST `stream_stopped` |
-| [`compute-coalition-handle-breach.workflow.json`](../../keeperhub/compute-coalition-handle-breach.workflow.json) | `recordBreach` → `slash` → `updateMemberUnits=0` → POST `breach_slashed` |
+| # | Workflow ID | Workflow | Nodes / Edges | On-chain actions chained | Action |
+|---:|---|---|---:|---:|---|
+| 1 | **`8mah6alp4w5a1eb4eqj6s`** | [`compute-coalition-activate-and-pool.workflow.json`](../../keeperhub/compute-coalition-activate-and-pool.workflow.json) | **6 / 5** | **4** | `Coalition.activate` → `GDA.createPool` → `updateMemberUnits` (×2) → POST `payment_pool_ready` |
+| 2 | **`lg2mw6be5tck0scx1zxcv`** | [`compute-coalition-handle-breach.workflow.json`](../../keeperhub/compute-coalition-handle-breach.workflow.json) | 5 / 4 | 3 | `Coalition.recordBreach` → `slash` → `updateMemberUnits=0` → POST `breach_slashed` *(placeholder; shape locked for v2)* |
+| 3 | **`1tmtaw7r4u2nr0hpt3kgf`** | [`compute-coalition-propose.workflow.json`](../../keeperhub/compute-coalition-propose.workflow.json) | 3 / 2 | 1 | `Coalition.propose` → POST `coalition_proposed` |
+| 4 | **`i4loo42c2uv66stpmxuw0`** | [`compute-coalition-stream-start.workflow.json`](../../keeperhub/compute-coalition-stream-start.workflow.json) | 3 / 2 | 1 | `GDA.distributeFlow(rate)` → POST `stream_started` |
+| 5 | **`y0tztp0kv2ke5szdu8arp`** | [`compute-coalition-stream-stop.workflow.json`](../../keeperhub/compute-coalition-stream-stop.workflow.json) | 3 / 2 | 1 | `GDA.distributeFlow(0)` → POST `stream_stopped` |
+
+**Headline workflow.** `activate-and-pool` (#1) is the most non-trivial — a single trigger fans out into four sequential on-chain transactions (Coalition state transition + Superfluid pool creation + two member-unit allocations) before the orchestrator gets a single `payment_pool_ready` callback. Failure on any step needs to be observable downstream; this is exactly the workflow KH's MCP/JSON-RPC trigger semantics make tractable. The five together exercise both halves of the agent-economy stack — coalition lifecycle (1, 3, 2) and per-second money streams (4, 5).
 
 Drivers + callbacks:
 - [`orchestrator/keeperhub.py`](../../orchestrator/keeperhub.py) — KH MCP/JSON-RPC client

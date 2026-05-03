@@ -9,6 +9,7 @@ import { fetchPaymentRequirements, verifyPayment } from "@/lib/infer-stream";
 import { signX402, signX402WithWallet } from "@/lib/sign-payment";
 import { loadAuth, loadDemoPayerKey, loadChainId } from "@/lib/auth-store";
 import { useWallet } from "@/lib/use-wallet";
+import { faucet } from "@/lib/api";
 
 export default function InferStep3() {
   const T = useT();
@@ -68,6 +69,34 @@ export default function InferStep3() {
         apiKey: auth.apiKey,
       });
       const chainId = loadChainId();
+
+      // Auto-mint mock USDC to the connected wallet so the EIP-3009 voucher
+      // settles cleanly. The orchestrator owns the mock; this is a no-op for
+      // the demo-key signing path (no wallet to credit) and a no-op when the
+      // facilitator already has balance — but mint is cheap and idempotent on
+      // the orchestrator side (30s dedupe per wallet), so we just always call.
+      if (useWalletSigning && wallet.address) {
+        const requiredMicro = BigInt(requirements.maxAmountRequired || "0");
+        // Round required micro-USDC up to whole USDC, then add 50 USDC headroom
+        // so the same wallet can run a few inferences before re-minting.
+        const requiredUsdc = Number(
+          (requiredMicro + 999_999n) / 1_000_000n,
+        );
+        const mintAmount = Math.max(100, requiredUsdc + 50);
+        setPhaseLabel(`Topping up wallet with mock USDC (${mintAmount})…`);
+        try {
+          const m = await faucet.mintUsdc(wallet.address, mintAmount);
+          if (!m.ok) {
+            // Soft warn — keep going; the user may already have balance from
+            // a previous mint or out-of-band funding. The facilitator will
+            // surface a clear "insufficient balance" if not.
+            console.warn("[faucet] mint not ok, continuing:", m.error);
+          }
+        } catch (e) {
+          console.warn("[faucet] mint threw, continuing:", e);
+        }
+      }
+
       setPhaseLabel(useWalletSigning ? "Waiting for wallet signature…" : "Signing locally…");
       const { header, payer } = useWalletSigning
         ? await signX402WithWallet({ account: wallet.address!, requirements, chainId })

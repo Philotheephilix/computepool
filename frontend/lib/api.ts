@@ -176,3 +176,54 @@ export const state = {
 export const models = {
   list: () => req<Record<string, number>>("/api/models", { headers: h(false) }),
 };
+
+// ── Testnet faucet ─────────────────────────────────────────────────────────
+//
+// Auto-funds the connected wallet with mock USDC so a 402 x402 challenge can
+// resolve without the user manually chasing a faucet bot. The orchestrator
+// always returns HTTP 200 — read `ok` to branch on success/failure so we
+// don't trigger ApiError's reject path inside the inference flow.
+
+export type FaucetMintResult = {
+  ok: boolean;
+  wallet?: string;
+  tx_hash?: string;
+  amount_minted_usdc?: number;
+  amount_minted_micro?: string;
+  asset?: string;
+  chain_id?: number;
+  explorer?: string;
+  deduped?: boolean;
+  error?: string;
+};
+
+export type FaucetBalanceResult = {
+  ok: boolean;
+  wallet?: string;
+  balance_micro?: string;
+  balance_usdc?: number;
+  asset?: string;
+  chain_id?: number;
+  error?: string;
+};
+
+export const faucet = {
+  mintUsdc: async (wallet: string, amount?: number): Promise<FaucetMintResult> => {
+    const res = await fetch(`${BASE}/faucet/usdc-mint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(amount === undefined ? { wallet } : { wallet, amount }),
+    });
+    if (!res.ok) {
+      // Treat any non-2xx as a soft failure; never throw inside the infer flow.
+      return { ok: false, error: `faucet HTTP ${res.status}` };
+    }
+    return (await res.json()) as FaucetMintResult;
+  },
+  usdcBalance: async (wallet: string): Promise<FaucetBalanceResult> => {
+    const url = `${BASE}/faucet/usdc-balance?wallet=${encodeURIComponent(wallet)}`;
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) return { ok: false, error: `faucet HTTP ${res.status}` };
+    return (await res.json()) as FaucetBalanceResult;
+  },
+};
