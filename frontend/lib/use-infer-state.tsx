@@ -35,6 +35,9 @@ export type InferState = {
   costUsdc?: number;
   settleTx?: string;
   errorMsg?: string;
+
+  /** Pool worker assignments: [{node_id, role, layers:[start,end]}, …] — used by the receipt to label per-node payouts. */
+  assignments?: { node_id: string; role: "entry" | "exit"; layers: [number, number] }[] | null;
 };
 
 const DEFAULTS: InferState = {

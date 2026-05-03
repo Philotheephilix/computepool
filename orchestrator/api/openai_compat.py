@@ -77,6 +77,12 @@ def build_router(
     """
     r = APIRouter(prefix="/v1")
 
+    def _checksum(addr: str) -> str:
+        # web3.py strict-validates address casing before ABI-encoding the call.
+        # The bearer-token wallet may be lowercase; normalize before passing it on.
+        from web3 import Web3
+        return Web3.to_checksum_address(addr)
+
     @r.get("/models")
     async def list_models(caller_wallet: str = Depends(get_caller_wallet)):
         out = []
@@ -84,7 +90,7 @@ def build_router(
         async for p in cursor:
             tid = p.get("inft_token_id")
             if tid is not None and inft_client is not None:
-                ok = await inft_client.is_authorized(token_id=tid, user=caller_wallet)
+                ok = await inft_client.is_authorized(token_id=tid, user=_checksum(caller_wallet))
                 if not ok:
                     continue
             out.append({
@@ -114,7 +120,7 @@ def build_router(
                 raise HTTPException(status_code=404, detail=f"no loaded pool for model={req.model}")
             tid = pool.get("inft_token_id")
             if tid is not None and inft_client is not None:
-                ok = await inft_client.is_authorized(token_id=tid, user=caller_wallet)
+                ok = await inft_client.is_authorized(token_id=tid, user=_checksum(caller_wallet))
                 if not ok:
                     raise HTTPException(status_code=403, detail="caller not authorized on INFT")
 
@@ -168,7 +174,7 @@ def build_router(
 
         tid = pool.get("inft_token_id")
         if tid is not None and inft_client is not None:
-            ok = await inft_client.is_authorized(token_id=tid, user=caller_wallet)
+            ok = await inft_client.is_authorized(token_id=tid, user=_checksum(caller_wallet))
             if not ok:
                 raise HTTPException(status_code=403, detail="caller not authorized on INFT")
 

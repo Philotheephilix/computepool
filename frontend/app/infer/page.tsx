@@ -71,6 +71,7 @@ export default function InferStep1() {
                     model: p.model ?? "",
                     modelName: shortName(p.model ?? p.name),
                     pricePerTokenUsdc: p.price_per_token_usdc ?? 0,
+                    assignments: p.assignments ?? null,
                   })}
                   style={cardStyle(T, sel)}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>

@@ -13,6 +13,7 @@
 | **Pitch deck** | `frontend/app/pitch/page.tsx` (also live at `/pitch`) |
 | **End-to-end script** | `scripts/e2e_demo.py` |
 | **Sponsor write-ups** | [`sponsors/`](sponsors/) — one folder per track |
+| **Prize tracks** | [`prizes.md`](prizes.md) — submission summary across 0G, Gensyn (AXL), KeeperHub |
 
 ---
 

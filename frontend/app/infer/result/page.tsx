@@ -69,26 +69,53 @@ export default function InferStep5() {
           </div>
 
           <div style={{ marginTop: 24, paddingTop: 18, borderTop: `1px solid ${T.border}` }}>
-            <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: T.text2, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>Payment breakdown</div>
-            <RowKV k="node-a (L0–17)" v={`${(cost / 2).toFixed(4)} USDC`}/>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-              <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text2 }}>node-b (L18–35)</span>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 14, color: breached ? T.red : T.text1 }}>
-                {breached ? (
-                  <>
-                    <span style={{ marginRight: 6 }}>slashed</span>
-                    <span style={{ textDecoration: "line-through", color: T.text3 }}>
-                      {(cost / 2).toFixed(4)}
-                    </span>
-                  </>
-                ) : `${(cost / 2).toFixed(4)} USDC`}
-              </span>
+            <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: T.text2, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              Payment breakdown
             </div>
-            <RowKV k="Subtotal" v={`${(breached ? cost / 2 : cost).toFixed(4)} USDC`}/>
+            {(() => {
+              // Use real pool assignments if present; otherwise fall back to a generic 50/50 split.
+              const assignments = state.assignments ?? null;
+              const fallback = [
+                { node_id: "entry", role: "entry" as const, layers: [0, 0] as [number, number] },
+                { node_id: "exit",  role: "exit"  as const, layers: [0, 0] as [number, number] },
+              ];
+              const rows = assignments && assignments.length === 2 ? assignments : fallback;
+              const totalLayers = rows.reduce((a, r) => a + Math.max(r.layers[1] - r.layers[0], 1), 0);
+              const sortedRows = [...rows].sort(
+                (a, b) => (a.role === "entry" ? -1 : 1) - (b.role === "entry" ? -1 : 1),
+              );
+              const exitNodeId = sortedRows.find(r => r.role === "exit")?.node_id;
+              return sortedRows.map((r) => {
+                const span = Math.max(r.layers[1] - r.layers[0], 1);
+                const share = cost * (span / totalLayers);
+                const slashed = breached && r.node_id === exitNodeId;
+                const label = `${r.node_id} (L${r.layers[0]}–${r.layers[1] - 1})`;
+                return (
+                  <div key={r.node_id} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                    <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text2 }}>{label}</span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 14,
+                      color: slashed ? T.red : (share > 0 ? T.text1 : T.text3),
+                      fontVariantNumeric: "tabular-nums" }}>
+                      {slashed ? (
+                        <>
+                          <span style={{ marginRight: 6 }}>slashed</span>
+                          <span style={{ textDecoration: "line-through", color: T.text3 }}>
+                            {share.toFixed(6)}
+                          </span>
+                        </>
+                      ) : `${share.toFixed(6)} USDC`}
+                    </span>
+                  </div>
+                );
+              });
+            })()}
+            <div style={{ height: 1, background: T.border, margin: "10px 0" }}/>
+            <RowKV k="Subtotal" v={`${(breached ? cost / 2 : cost).toFixed(6)} USDC`}/>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
               <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text2 }}>Refunded</span>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 14, color: T.primary, fontWeight: 500 }}>
-                {refund.toFixed(4)} USDC
+              <span style={{ fontFamily: FONT_MONO, fontSize: 14, color: T.primary, fontWeight: 500,
+                fontVariantNumeric: "tabular-nums" }}>
+                {refund.toFixed(6)} USDC
               </span>
             </div>
           </div>
@@ -96,16 +123,14 @@ export default function InferStep5() {
           <div style={{ marginTop: 24, paddingTop: 18, borderTop: `1px solid ${T.border}` }}>
             <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: T.text2, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>On-chain audit trail</div>
             {([
-              ["Settlement", state.settleTx,                                                "primary" as const],
-              ...(breached ? [["Slash", "0x123…99ab", "red" as const] as const] : []),
-              ["Coalition",  "0xabc…f019", "purple" as const],
-              ["Stream",     "0xdef…2244", "purple" as const],
+              ["Settlement", state.settleTx, "primary" as const],
+              ...(breached ? [["Slash", undefined, "red" as const] as const] : []),
             ] as const).map(([label, hash, kind]) => (
               <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                   <span style={{
                     width: 6, height: 6, borderRadius: 3,
-                    background: kind === "purple" ? T.purple : kind === "red" ? T.red : T.primary,
+                    background: kind === "red" ? T.red : T.primary,
                   }}/>
                   <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.text2 }}>{label}</span>
                 </span>
@@ -121,6 +146,10 @@ export default function InferStep5() {
             ))}
           </div>
 
+          <div style={{ marginTop: 18, fontFamily: FONT_BODY, fontSize: 11, color: T.text3, lineHeight: 1.5 }}>
+            Per-node payouts route through the pool&apos;s Superfluid GDA on the orchestrator at
+            request close. Membership units are held by the operators&apos; signing addresses.
+          </div>
           <Button kind="primary" full style={{ marginTop: 20 }} onClick={() => router.push("/infer")}>
             Run another →
           </Button>

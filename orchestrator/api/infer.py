@@ -101,20 +101,34 @@ async def stream_pool_inference(
 
     tokens_in = 0
     tokens_out = 0
+    cost_usdc = 0.0
+    last_text: str | None = None
 
     async for ev in run_stream(pool=_pool, body=body, request_id=request_id):
         event_type = ev.get("event")
         if event_type == "token":
-            token_text = ev.get("token", "")
+            # Worker emits the decoded text as `delta` (see worker/pipeline.py); tolerate
+            # `token` for forward-compat.
+            token_text = ev.get("delta") or ev.get("token") or ""
             tokens_out += 1
             yield {"token": token_text}
         elif event_type == "meta":
             tokens_in = ev.get("tokens_in", tokens_in)
         elif event_type == "done":
+            # Worker emits the count as `tokens` on the done event; map both shapes.
+            # Preserve cost_usdc so the receipt UI can split it across nodes.
             tokens_in = ev.get("tokens_in", tokens_in)
-            tokens_out = ev.get("tokens_out", tokens_out)
+            tokens_out = ev.get("tokens_out", ev.get("tokens", tokens_out))
+            cost_usdc = float(ev.get("cost_usdc", 0.0) or 0.0)
+            last_text = ev.get("text", last_text)
 
-    yield {"done": True, "tokens_in": tokens_in, "tokens_out": tokens_out}
+    yield {
+        "done": True,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "cost_usdc": cost_usdc,
+        "text": last_text,
+    }
 
 
 async def run_pool_inference(
@@ -298,7 +312,23 @@ def build_router(
                 "invalidReason": f"unparseable X-PAYMENT: {e}",
                 "requirements": requirements,
             })
-        verify = await verify_via_facilitator(payment, requirements, http=http)
+        # The facilitator can be unreachable, slow, or return non-2xx (which
+        # `verify_via_facilitator` turns into an httpx exception via
+        # `raise_for_status`). Without this guard the exception escapes the
+        # route, the response becomes a 500 from Starlette's
+        # ServerErrorMiddleware, and CORSMiddleware never wraps it — so the
+        # browser sees both a 500 AND a CORS error on the review screen.
+        # Treat any facilitator failure as `isValid=false` with a readable
+        # reason so the UI can render it inline.
+        try:
+            verify = await verify_via_facilitator(payment, requirements, http=http)
+        except Exception as e:
+            logger.exception("facilitator verify failed for pool=%s", name)
+            return JSONResponse(status_code=200, content={
+                "isValid": False,
+                "invalidReason": f"facilitator unreachable: {e!r}",
+                "requirements": requirements,
+            })
         return JSONResponse(status_code=200, content={
             "isValid": bool(verify.get("isValid")),
             "invalidReason": verify.get("invalidReason"),
@@ -369,6 +399,7 @@ def build_router(
 
         async def event_stream():
             saw_done = False
+            tokens_emitted = 0
             try:
                 async for ev in stream_pool_inference(
                     pool_name=name,
@@ -378,9 +409,36 @@ def build_router(
                     _pool=pool,
                     _run_stream=run_inference_stream,
                 ):
-                    if ev.get("done"):
+                    if "token" in ev:
+                        # Translate the helper's `{"token": str}` shape into the wire
+                        # format the frontend's active page consumes:
+                        # `{event:"token", delta:str, request_id:str}`.
+                        tokens_emitted += 1
+                        yield (
+                            "data: "
+                            + json.dumps({
+                                "event": "token",
+                                "request_id": request_id,
+                                "seq": tokens_emitted - 1,
+                                "delta": ev["token"],
+                            })
+                            + "\n\n"
+                        )
+                    elif ev.get("done"):
                         saw_done = True
-                    yield f"data: {json.dumps(ev)}\n\n"
+                        done_payload = {
+                            "event": "done",
+                            "request_id": request_id,
+                            "tokens": ev.get("tokens_out", tokens_emitted),
+                            "tokens_in": ev.get("tokens_in", 0),
+                            "cost_usdc": ev.get("cost_usdc", 0.0),
+                        }
+                        if ev.get("text"):
+                            done_payload["text"] = ev["text"]
+                        yield "data: " + json.dumps(done_payload) + "\n\n"
+                    else:
+                        # Pass any other event types through unchanged.
+                        yield f"data: {json.dumps(ev)}\n\n"
             except Exception as e:
                 logger.exception("infer_stream upstream failed req=%s", request_id)
                 yield f"data: {json.dumps({'event': 'error', 'request_id': request_id, 'error': repr(e)})}\n\n"

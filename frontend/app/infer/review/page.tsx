@@ -25,11 +25,17 @@ export default function InferStep3() {
   }, []);
 
   const live = state.mode === "live";
-  const auth = typeof window === "undefined" ? null : loadAuth();
-  const demoKey = typeof window === "undefined" ? null : loadDemoPayerKey();
+  // Defer reading browser-only storage (localStorage, wallet) until after mount.
+  // Reading these during render causes the server-rendered HTML (always null)
+  // to disagree with the client tree (real values), producing React #418
+  // "hydration failed" errors.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  const auth = mounted ? loadAuth() : null;
+  const demoKey = mounted ? loadDemoPayerKey() : null;
   const { state: wallet, connect: connectWallet, switchChain, busy: walletBusy } = useWallet();
-  const useWalletSigning = !!wallet.address;
-  const useDemoKeySigning = !useWalletSigning && !!demoKey;
+  const useWalletSigning = mounted && !!wallet.address;
+  const useDemoKeySigning = mounted && !useWalletSigning && !!demoKey;
   const liveReady = live && !!auth && (useWalletSigning || useDemoKeySigning);
 
   const liveBlocker = !auth

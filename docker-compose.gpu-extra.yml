@@ -1,0 +1,88 @@
+# Extra GPU worker services running alongside the existing node-a / node-b.
+# Use with:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gpu-extra.yml up -d node-a-gpu node-b-gpu
+#
+# Same prereqs as docker-compose.gpu.yml (NVIDIA driver + nvidia-container-toolkit
+# + image built with `make build-gpu`).
+
+services:
+  node-a-gpu:
+    image: dis-com:latest
+    container_name: discom-node-a-gpu
+    depends_on:
+      - orchestrator
+    command: ["worker"]
+    environment:
+      NODE_ID: node-a-gpu
+      WORKER_URL: http://node-a-gpu:7000
+      ORCHESTRATOR_URL: http://orchestrator:8000
+      MODEL_NAME: ${MODEL_NAME:-Qwen/Qwen2.5-3B-Instruct}
+      PEER_HOST: node-b-gpu
+      AXL_API_URL: http://localhost:9002
+      OWNER_API_KEY: ${OWNER_API_KEY:-}
+      WORKER_PRIVATE_KEY: ${WORKER_A_PRIVATE_KEY:-}
+      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://evmrpc-testnet.0g.ai}
+      GDA_V1_FORWARDER: ${GDA_V1_FORWARDER}
+      TORCH_DEVICE: cuda
+      TORCH_DTYPE: ${TORCH_DTYPE:-}
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+    volumes:
+      - node-a-gpu-data:/data
+      - hf-cache:/root/.cache/huggingface
+    ports:
+      - "7020:7000"   # worker HTTP
+      - "7021:7001"   # AXL TCP
+      - "9022:9002"   # AXL HTTP API
+    networks:
+      - discom
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  node-b-gpu:
+    image: dis-com:latest
+    container_name: discom-node-b-gpu
+    depends_on:
+      - orchestrator
+    command: ["worker"]
+    environment:
+      NODE_ID: node-b-gpu
+      WORKER_URL: http://node-b-gpu:7000
+      ORCHESTRATOR_URL: http://orchestrator:8000
+      MODEL_NAME: ${MODEL_NAME:-Qwen/Qwen2.5-3B-Instruct}
+      PEER_HOST: node-a-gpu
+      AXL_API_URL: http://localhost:9002
+      OWNER_API_KEY: ${OWNER_API_KEY:-}
+      WORKER_PRIVATE_KEY: ${WORKER_B_PRIVATE_KEY:-}
+      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:-https://evmrpc-testnet.0g.ai}
+      GDA_V1_FORWARDER: ${GDA_V1_FORWARDER}
+      TORCH_DEVICE: cuda
+      TORCH_DTYPE: ${TORCH_DTYPE:-}
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+    volumes:
+      - node-b-gpu-data:/data
+      - hf-cache:/root/.cache/huggingface
+    ports:
+      - "7030:7000"
+      - "7031:7001"
+      - "9032:9002"
+    networks:
+      - discom
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  node-a-gpu-data:
+  node-b-gpu-data:

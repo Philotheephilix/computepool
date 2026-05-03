@@ -124,7 +124,7 @@ async def _poll_node(http: httpx.AsyncClient, node: dict) -> None:
         r.raise_for_status()
         info = r.json()
     except Exception as exc:
-        logger.debug("healthcheck failed for %s: %s", node.get("node_id"), exc)
+        logger.warning("healthcheck failed for %s @ %s: %s", node.get("node_id"), url, exc)
         await db.nodes().update_one(
             {"_id": obj_id},
             [
@@ -181,7 +181,10 @@ async def _reconcile_pool_loaded() -> None:
         members = await db.nodes().find(
             {"owner_username": owner, "node_id": {"$in": node_ids}}
         ).to_list(length=10)
-        if len(members) < len(node_ids) or any(m.get("status") != "loaded" for m in members):
+        # Only auto-unload when a member is *missing* from the DB. Per-poll
+        # transient failures (status=unhealthy) shouldn't yank the pool out from
+        # under in-flight inferences — `/unload` is the explicit owner action.
+        if len(members) < len(node_ids):
             await db.pools().update_one(
                 {"_id": pool["_id"]},
                 {"$set": {"loaded": False, "updated_at": _now()}},
@@ -912,11 +915,34 @@ async def _resolve_infer_targets(pool: dict) -> tuple[dict, dict, dict]:
     for role, node in (("entry", entry_node), ("exit", exit_node)):
         if node is None:
             raise HTTPException(503, f"{role} node no longer registered.")
-        if node.get("status") != "loaded":
+        if node.get("status") == "loaded":
+            continue
+        # Cached status says not-loaded; re-check live before refusing. The
+        # background healthcheck can lag or transiently fail; the worker is the
+        # authoritative source of `loaded`. Promote the row if it's actually up.
+        worker_url = (node.get("worker_url") or "").rstrip("/")
+        if not worker_url:
+            raise HTTPException(503, f"{role} node {node['node_id']!r} has no worker_url.")
+        http_client: httpx.AsyncClient = app.state.http
+        try:
+            r = await http_client.get(worker_url + "/info", timeout=WORKER_TIMEOUT_INFO)
+            r.raise_for_status()
+            info = r.json()
+        except Exception as exc:
             raise HTTPException(
                 503,
-                f"{role} node {node['node_id']!r} status={node.get('status')}; load the pool first.",
+                f"{role} node {node['node_id']!r} unreachable: {exc!r}",
             )
+        if not bool(info.get("loaded")):
+            raise HTTPException(
+                503,
+                f"{role} node {node['node_id']!r} reports loaded=False; load the pool first.",
+            )
+        await db.nodes().update_one(
+            {"_id": node["_id"]},
+            {"$set": {"status": "loaded", "fail_count": 0, "last_seen": _now()}},
+        )
+        node["status"] = "loaded"
     return entry_node, exit_node, {"entry": entry_assn, "exit": exit_assn}
 
 
