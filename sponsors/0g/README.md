@@ -149,7 +149,6 @@ The Coalition contract is **testnet-only** in the mainnet config (`COALITION_ENA
 
 ---
 
-## Track qualification
 
 Hits **both** 0G prize tracks.
 

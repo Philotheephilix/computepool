@@ -206,7 +206,6 @@ Worker container env (full table in `docs/`):
 | `NODE_ID`, `WORKER_URL`, `ORCHESTRATOR_URL`, `OWNER_API_KEY` | yes | self-registration |
 | `MODEL_NAME` | no | default `Qwen/Qwen2.5-3B-Instruct` |
 | `PEER_HOST` or `PEER_ADDR` | yes | the *other* worker (single-worker mode is not supported) |
-| `AXL_API_URL` | no | default `http://localhost:9002` (in-container) |
 
 Orchestrator reads `MONGODB_URI`, `MONGODB_DB`, plus 0G + Superfluid + x402 + KeeperHub env documented in `.env.example` (testnet) and `.env.mainnet` (auto-generated, mainnet).
 
