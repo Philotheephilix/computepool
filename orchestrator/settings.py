@@ -26,7 +26,16 @@ class Settings(BaseSettings):
     chain_id: int = 16602
     usdc_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
     usdcx_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
-    coalition_address: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
+    # Coalition is testnet-only. Mainnet deployments omit it and run the
+    # economics pipeline with `coalition_enabled=false`, in which case
+    # Coalition.propose / activate are skipped and the GDA flow runs without
+    # an on-chain stake commitment. Address validation is loosened so the
+    # placeholder 0x0...0 is acceptable on mainnet.
+    coalition_enabled: bool = True
+    coalition_address: str = Field(
+        default="0x0000000000000000000000000000000000000000",
+        pattern=r"^0x[0-9a-fA-F]{40}$",
+    )
     # Forwarders are deployed alongside Superfluid framework on 0G (no canonical addresses).
     cfa_v1_forwarder: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")
     gda_v1_forwarder: str = Field(..., pattern=r"^0x[0-9a-fA-F]{40}$")

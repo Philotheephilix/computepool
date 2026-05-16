@@ -113,6 +113,22 @@ class EconomicsService:
         #         + "/webhooks/keeperhub",
         #     ),
         # )
+        if not self.settings.coalition_enabled:
+            logger.info(
+                "coalition disabled (mainnet config); skipping Coalition.propose and "
+                "synthesizing activated state inline session_id=%s",
+                coalition_id,
+            )
+            await self.db.coalitions.update_one(
+                {"_id": coalition_id},
+                {"$set": {"onchain_id": 0, "state": CoalitionState.ACTIVE.value}},
+            )
+            asyncio.create_task(self.on_payment_pool_ready({
+                "session_id": coalition_id,
+                "super_token": self.settings.usdcx_address,
+            }))
+            return coalition_id
+
         if self.onchain is None:
             raise RuntimeError("onchain submitter required while KH 0G writes are broken")
         result = await self.onchain.propose(
@@ -244,6 +260,22 @@ class EconomicsService:
         #         + "/webhooks/keeperhub",
         #     },
         # )
+        if not self.settings.coalition_enabled:
+            logger.info("coalition disabled; skipping activate, going straight to createPool")
+            if self.onchain is None:
+                raise RuntimeError("onchain submitter required for createPool")
+            pool_res = await self.onchain.create_pool(
+                super_token=self.settings.usdcx_address,
+                admin=self.onchain.address,
+            )
+            asyncio.create_task(self.on_payment_pool_ready({
+                "session_id": coalition_id,
+                "pool_address": pool_res["pool_address"],
+                "super_token": self.settings.usdcx_address,
+                "create_pool_tx": pool_res["tx_hash"],
+            }))
+            return
+
         if self.onchain is None:
             raise RuntimeError("onchain submitter required while KH 0G writes are broken")
         activate_res = await self.onchain.activate(onchain_id=onchain_id)

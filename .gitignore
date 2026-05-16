@@ -16,6 +16,14 @@ PRD-*.md
 .env.local
 *.env
 !.env.example
+keys.json
 contracts/out/
 contracts/cache/
 contracts/broadcast/
+
+# Mainnet artifacts — addresses + tx hashes go in MAINNET_DEPLOYMENT.md (tracked).
+# .env.mainnet and the raw state file contain or could contain secrets/sensitive
+# operator keys (when filled in) and stay local.
+.env.mainnet
+.mainnet_state.json
+vendor/superfluid/
