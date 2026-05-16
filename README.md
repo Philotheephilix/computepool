@@ -16,20 +16,6 @@
 | **Pitch deck** | `frontend/app/pitch/page.tsx` (also live at `/pitch`) |
 | **End-to-end script** | `scripts/e2e_demo.py` |
 
----
-
-## Sponsor judging packets
-
-Three deep-dive READMEs — start here:
-
-- **0G** ($15,000) — [`sponsors/0g/README.md`](sponsors/0g/README.md)
-  › Pooled-GPU SDK behind a TEE-attested orchestrator · Superfluid live on Galileo (chainId 16602) · ERC-7857 PoolINFT as access primitive
-- **Gensyn — AXL** ($5,000) — [`sponsors/gensyn-axl/README.md`](sponsors/gensyn-axl/README.md)
-  › First production layer-pipelined LLM inference over AXL · prebuilt NVIDIA + CPU images with the AXL binary inside · native Tailscale in the same compose stack
-- **KeeperHub** ($5,000) — [`sponsors/keeperhub/README.md`](sponsors/keeperhub/README.md)
-  › Two upstream PRs (#1106 Superfluid plugin, #1105 Coalition plugin) · five workflows drive the full x402 + Superfluid payment lifecycle
-
----
 
 ## What it actually does
 
@@ -45,19 +31,6 @@ A single GPU can't fit a real model. We turn N small GPUs into one virtual one:
 - **Coordination:** [`orchestrator/keeperhub.py`](orchestrator/keeperhub.py) drives five [KeeperHub workflows](keeperhub/) for coalition activation, pool wiring, stream start/stop, and slashing.
 - **Custody / iNFT:** [`orchestrator/inft/`](orchestrator/inft/) mints a per-pool ERC-7857 INFT on 0G with encrypted intelligence metadata.
 
----
-
-## Why it wins (one line per sponsor)
-
-| Sponsor | What we shipped on top | Track relevance |
-|---|---|---|
-| **[0G](sponsors/0g/)** | First **CREATE2-deployed verified Superfluid contracts** on 0G Galileo · **pooled-GPU SDK** lets consumer cards qualify for 0G Compute together · orchestrator runs in **TEE** so 0G's signing flow stays intact · live ERC-7857 **INFT per pool** | Best Agent Framework / Tooling **and** Best Autonomous Agents / iNFT |
-| **[Gensyn — AXL](sponsors/gensyn-axl/)** | **First production deployment of layer-pipelined LLM inference over AXL.** Multi-node by construction (entry node ⇄ exit node). Prebuilt NVIDIA + CPU Docker images = **one-line deploy**. **Tailscale-native** — zero exposed ports. | Best Application of AXL — depth, multi-node, real utility |
-| **[KeeperHub](sponsors/keeperhub/)** | Five workflows that drive the full demo · upstream [**Superfluid plugin (#1106)**](https://github.com/KeeperHub/keeperhub/pull/1106) · upstream [**Coalition plugin (#1105)**](https://github.com/KeeperHub/keeperhub/pull/1105) — multi-party on-chain commitments with slashing · agents pay autonomously via **x402** | Best Innovative Use **and** Best Integration (payments + framework) |
-
-Each sponsor folder contains the full breakdown — what we built, where it lives in the code, and how to verify it.
-
----
 
 ## Repo layout
 
@@ -131,7 +104,6 @@ Worker container env (full table in `docs/`):
 | `NODE_ID`, `WORKER_URL`, `ORCHESTRATOR_URL`, `OWNER_API_KEY` | yes | self-registration |
 | `MODEL_NAME` | no | default `Qwen/Qwen2.5-3B-Instruct` |
 | `PEER_HOST` or `PEER_ADDR` | yes | the *other* worker (single-worker mode is not supported) |
-| `AXL_API_URL` | no | default `http://localhost:9002` (in-container) |
 
 Orchestrator reads `MONGODB_URI`, `MONGODB_DB`, plus 0G + Superfluid + x402 + KeeperHub env documented in `.env.example`.
 
@@ -151,18 +123,3 @@ All endpoints except `/`, `/health`, `/api/models`, `/auth/*` require `X-API-Key
 | `POST` | `/v1/chat/completions` | OpenAI-compatible streaming inference (gated by x402) |
 
 ---
-
-## Honest limits
-
-- **Single in-flight generation per pool** (no batching, no parallel requests in v1).
-- **KV cache lives in worker RAM**; dropped on `unload` or container restart.
-- **Worker callbacks are unauthenticated** — never expose worker ports publicly. AXL TLS handshake protects the P2P link itself but there is no peer allowlist yet.
-- **CPU-only by default** — bundled `torch` is the CPU wheel. Swap for the matching CUDA wheel in `worker/requirements.txt` for GPU.
-- **AXL port** is overridden to `7001` (away from the worker's `7000`); don't change it.
-
----
-
-## Team & contact
-
-**Architecture deep-dive:** [`docs/`](docs/)
-**Sponsor judging packets:** [`sponsors/`](sponsors/)
